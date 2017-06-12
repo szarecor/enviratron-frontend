@@ -1,0 +1,44 @@
+
+<div>
+
+<label [ngClass]="{'active': selectedChambers.length === chamberNames.length }">
+    <input (click)="allChambersButtonClick($event)" type="checkbox" name="chambers" value="" />
+    <br />
+    All
+</label>
+
+<label [ngClass]="{'active': selectedChambers.indexOf(chamber) !== -1 }" *ngFor="let chamber of chamberNames; index as i">
+    <input (click)="chamberButtonClick(chamber)" type="checkbox" name="chambers" (value)="chamber" />
+    [[chamber]]
+</label>
+
+
+<br clear="both" />
+</div>
+<!--
+ [ngClass]="{'check-mark': completedDays.indexOf(d) !== -1 }"
+ -->
+
+<style>
+    label {
+        border: 1px solid #d0d0d0;
+        margin: 0;
+        margin-right: .5em;
+        width: 70px;
+        height: 70px;
+        display: inline-block;
+        float: left;
+        text-transform: capitalize;
+        text-align: center;
+    }
+
+    input {
+        visibility: hidden;
+    }
+
+    label.active {
+        background-color: #d0d0d0;
+    }
+
+
+</style>
