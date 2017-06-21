@@ -51,7 +51,6 @@ export class SvgSchedulerComponent {
 
 
 timePointClick(thisPoint : any) {
-    console.log(this.timePoints);
     this.timePoints = this.timePoints.filter(function(p) {
       return !(p.x === thisPoint.x && p.y === thisPoint.y);
     });
@@ -112,17 +111,23 @@ timePointClick(thisPoint : any) {
   });
 
   // Now make sure that the entire 24 hours are covered:
-    console.log(this.timePoints)
   // Create a point for 12:01 AM:
   if (this.timePoints[0].x > 0) {
-    this.timePoints.splice(
+
+      var tmpDate = new Date(0)
+      tmpDate.setHours(0);
+      tmpDate.setMinutes(0);
+
+
+
+      this.timePoints.splice(
         0,
         0,
         {
           x: 0
           , y: this.timePoints[0].y
           , temp: this.timePoints[0].temp
-          , time: new Date(0).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          , time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
         }
     )
   }
@@ -132,13 +137,16 @@ timePointClick(thisPoint : any) {
 
     var lastTimePoint = this.timePoints[this.timePoints.length-1]
 
-    console.log("need to add a terminal")
+    //console.log("need to add a terminal")
+    var tmpDate = new Date(0)
+    tmpDate.setHours(23);
+    tmpDate.setMinutes(59);
 
     this.timePoints.push({
       x: this.width
       , y: lastTimePoint.y
       , temp: lastTimePoint.temp
-      , time: new Date(this.width).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      , time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
     });
   }
 
@@ -155,7 +163,6 @@ timePointClick(thisPoint : any) {
 
 
   var tbl = d3.select("table tbody");
-  //console.log(tbl)
 
   // Clear any existing table rows:
   tbl.selectAll("tr")
@@ -184,11 +191,6 @@ timePointClick(thisPoint : any) {
 
 
   ngOnInit() {
-
-
-
-
-
 
 
 
@@ -292,7 +294,6 @@ timePointClick(thisPoint : any) {
                   currentMouseTemp = 0; //'';
                   currentMouseTime = '';
               }
-              //console.log(currentMouseTemp, timeString)
 
           }
       );
@@ -337,8 +338,20 @@ timePointClick(thisPoint : any) {
 
           })
 
+          // Sort the timepoints on x-axis position:
+          _this.timePoints.sort(function(a,b) {
+            if (a === b) {
+              return 0;
+            } else {
+              return a.x < b.x ? -1 : 1;
+            }
+
+          });
+
 
           _this.updateRendered();
+
+
 
       });
   }
