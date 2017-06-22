@@ -1,7 +1,7 @@
 
 
 
-<chamber-buttons (onChambersChange)="handleChambersChange($event)" [chamberNames]="chambers">
+<chamber-buttons (onChambersChange)="handleChambersChange($event)">
 </chamber-buttons>
 <hr />
 
@@ -31,7 +31,10 @@
 <hr />
 <p>Everything below this point is in the parent component</p>
 
-current chambers: [[ currentChambers.join(", ") ]]
+chambers: [[ chambers ]]
+<br />
+
+current chambers: [[ currentChambers ]]
 <br />
 
 current tab state: [[ currentChamberVariable ]]

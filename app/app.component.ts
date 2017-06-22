@@ -1,66 +1,66 @@
 import { Component, Input, Output, OnInit} from '@angular/core';
-
+import { Subscription } from 'rxjs/Subscription';
 import { ChamberDataService } from './data.service';
 
 @Component({
   selector: 'my-app',
   // This was poorly documented and difficult to find:
   interpolation: ['[[', ']]'],
-  templateUrl: './app_template.html',
-  providers: [ChamberDataService]
+  templateUrl: './app_template.html'
+  //, providers: [ChamberDataService]
 
 })
 
 
 export class AppComponent implements OnInit {
 
-    currentChambers: string[] = [];
+    currentChambers: number[] = [];
     currentDays: string[] = [];
     currentChamberVariable: string;
-
     currentTimePoints: any[];
-
     dataService: any;
     dayCount: number;
 
-    /*
-    chamberRegimes: = {
-      'chambers': {
-          'chamber 1': {
-              'temperature': {
-                  // k == datetime, v == degrees celsius
-
-              }
-
-
-          }
-
-        }
-
-
-
-    };
-    */
-  chambers : string[] = [] //'chamber 1', 'chamber 2', 'chamber 3', 'chamber 4', 'chamber 5', 'chamber 6', 'chamber 7', 'chamber 8'];
+    selectedDays : number[] = []; //[1,5,6,7];
+    completedDays : number[] = []; //[2,3,4];
+    chambers : number[] = [];
 
 
     constructor(private ChamberDataService: ChamberDataService) {
-
       this.dataService = ChamberDataService;
 
+      this.dataService.getChambers().subscribe((chambers : number[]) => this.chambers = chambers );
+      this.dataService.getCurrentChambers().subscribe(function(chambers: number[]) {
+          console.log("main component received message", chambers);
+        this.currentChambers = chambers;
+
+      });
+
+
+
+        //(chambers : number[]) => this.currentChambers = chambers );
+      // TODO: this doesn't belong here:
+      //this.dataService.setChambers([1,2,3,4,5,6,7,8]);
+      //this.dataService.setCurrentChambers([1,2,3]);
     }
 
     ngOnInit(): void {
-        console.log(ChamberDataService)
-        this.chambers = this.dataService.getChambers();
+
+
+        //this.dataService.getChambers().then((chambers : number[]) => _this.chambers = chambers);
+
+
+        console.log(this.currentChambers);
+
         this.dayCount = this.dataService.getDayCount();
+        this.selectedDays = this.dataService.getSelectedDays();
+        this.completedDays = this.dataService.getCompletedDays();
+
+
   }
 
 
 
-    //dayCount : number = 20;
-    selectedDays : number[] = [1,5,6,7];
-    completedDays : number[] = [2,3,4];
 
 
 
@@ -68,7 +68,7 @@ export class AppComponent implements OnInit {
       this.currentDays = e;
     }
 
-    handleChambersChange(e:string[]) {
+    handleChambersChange(e:number[]) {
       this.currentChambers = e;
     }
 

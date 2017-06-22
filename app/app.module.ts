@@ -13,6 +13,7 @@ import {ChamberDataService} from "./data.service";
   imports:      [ BrowserModule, FormsModule ],
   declarations: [ AppComponent, DaysSelectComponent, ChamberButtonsComponent, ChamberVariablesMenuComponent, SvgSchedulerComponent, SubmitButtonComponent ],
   bootstrap:    [ AppComponent ]
+  , providers: [ChamberDataService]
 })
 export class AppModule {
 

@@ -1,15 +1,22 @@
 
+
+[[ chambers ]]
+
+<br />
+[[ currentChambers ]]
+<br />
+
 <div>
 
-<label [ngClass]="{'active': selectedChambers.length === chamberNames.length }">
+<label [ngClass]="{'active': currentChambers.length === chambers.length }">
     <input (click)="allChambersButtonClick($event)" type="checkbox" name="chambers" value="" />
     <br />
     All
 </label>
 
-<label [ngClass]="{'active': selectedChambers.indexOf(chamber) !== -1 }" *ngFor="let chamber of chamberNames; index as i">
+<label [ngClass]="{'active': currentChambers.indexOf(chamber) !== -1 }" *ngFor="let chamber of chambers; index as i">
     <input (click)="chamberButtonClick(chamber)" type="checkbox" name="chambers" (value)="chamber" />
-    [[chamber]]
+    Chamber [[chamber]]
 </label>
 
 
