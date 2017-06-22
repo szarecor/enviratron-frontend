@@ -26,10 +26,11 @@
 
 
 
+<svg-scheduler [selectedDays]="selectedDays" (onTimePointsChange)="handleTimePointsChange($event)"></svg-scheduler>
 
 
+<enviratron-chamber-submit-button></enviratron-chamber-submit-button>
 
-<svg-scheduler></svg-scheduler>
 
 
 
@@ -49,3 +50,9 @@ current tab state: [[ currentChamberVariable ]]
 current selected days: [[ currentDays ]]
 <br />
 
+
+time points:
+<ol>
+  <li *ngFor="let point of currentTimePoints">[[ point.temp ]] - [[ point.time ]]</li>
+
+</ol>

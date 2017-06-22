@@ -6,10 +6,17 @@ import { DaysSelectComponent }  from './DaysSelect.component';
 import { ChamberButtonsComponent }  from './ChamberSelectButtons.component';
 import  { ChamberVariablesMenuComponent } from './ChamberVariablesMenu.component';
 import { SvgSchedulerComponent } from './SvgScheduler.component';
+import { SubmitButtonComponent } from './SubmitButton.component';
+import {ChamberDataService} from "./data.service";
 
 @NgModule({
   imports:      [ BrowserModule, FormsModule ],
-  declarations: [ AppComponent, DaysSelectComponent, ChamberButtonsComponent, ChamberVariablesMenuComponent, SvgSchedulerComponent ],
+  declarations: [ AppComponent, DaysSelectComponent, ChamberButtonsComponent, ChamberVariablesMenuComponent, SvgSchedulerComponent, SubmitButtonComponent ],
   bootstrap:    [ AppComponent ]
 })
-export class AppModule { }
+export class AppModule {
+
+
+
+
+}

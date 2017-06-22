@@ -14,7 +14,10 @@ declare var d3 : any;
 
 
 export class SvgSchedulerComponent {
-  @Input() dayCount: number = 0;
+  //@Input() dayCount: number = 0;
+
+  @Input() selectedDays: number[] = [];
+
   experimentDaysArray : any[];
   svg : any; //d3.select('svg');
 
@@ -35,7 +38,14 @@ export class SvgSchedulerComponent {
   yScale : any;
 
   // Emit an event for the parent to handle when there is a change on the days <select> list:
-  @Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
+  //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
+  @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
+
+  timePointsChangeHandler() {
+
+    this.onTimePointsChange.emit(this.timePoints);
+
+  }
 
   // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
   selectedDaysChangeHandler(selectedDays: string[]) {
@@ -350,7 +360,7 @@ timePointClick(thisPoint : any) {
 
 
           _this.updateRendered();
-
+          _this.timePointsChangeHandler();
 
 
       });
