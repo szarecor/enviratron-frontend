@@ -22,7 +22,15 @@
       stroke-opacity: 0.7;
       shape-rendering: crispEdges;
     }
+    #days button {
+      margin: .4em;
 
+    }
+
+    #days button.day-button-selected {
+      background-color: darkgreen !important;
+      color: #f8f8f8;
+    }
   </style>
 
 
@@ -34,15 +42,20 @@
     Current: <span id="mouseCurrentTemp"></span>&deg; C at <span id="mouseCurrentTime"></span>
   </div>
 
-  <style>
-    #days button {
-      margin: .4em;
+  <!--
+  <ol>
 
-    }
+    <li *ngFor="let day of selectedDays">[[ day ]]</li>
 
-    #days button.day-button-selected {
-      background-color: darkgreen !important;
-      color: #f8f8f8;
-    }
-  </style>
+  </ol>
+  -->
+
+  <br />
+  [[ selectedDays ]]
+  <br />
+
+  <ol>
+    <li *ngFor="let point of timePoints">[[ point.temp ]] - [[ point.time ]]</li>
+
+  </ol>
 

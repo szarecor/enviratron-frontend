@@ -14,7 +14,10 @@ declare var d3 : any;
 
 
 export class SvgSchedulerComponent {
-  @Input() dayCount: number = 0;
+  //@Input() dayCount: number = 0;
+
+  @Input() selectedDays: number[] = [];
+
   experimentDaysArray : any[];
   svg : any; //d3.select('svg');
 
@@ -35,22 +38,36 @@ export class SvgSchedulerComponent {
   yScale : any;
 
   // Emit an event for the parent to handle when there is a change on the days <select> list:
-  @Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
+  //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
+  @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
+
+  timePointsChangeHandler() {
+
+    this.onTimePointsChange.emit(this.timePoints);
+
+  }
 
   // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
-  selectedDaysChangeHandler(selectedDays: string[]) {
-    this.onDaysChange.emit(selectedDays);
-  }
+  //selectedDaysChangeHandler(selectedDays: string[]) {
+  //  this.onDaysChange.emit(selectedDays);
+  //}
 
 
   line : any = d3.line()
-    .x(function(d) { return d.x; })
-    .y(function(d) { return d.y; })
+    .x(function(d : any) { return d.x; })
+    .y(function(d : any) { return d.y; })
     .curve(d3.curveLinear);
     //d3.curveStepAfter);
 
 
+timePointClick(thisPoint : any) {
+    this.timePoints = this.timePoints.filter(function(p) {
+      return !(p.x === thisPoint.x && p.y === thisPoint.y);
+    });
 
+    this.updateRendered();
+    d3.event.stopPropagation();
+}
 
 
  updateRendered() {
@@ -59,26 +76,28 @@ export class SvgSchedulerComponent {
       .data(
           this.timePoints,
           // tell d3 to bind to a property of the obj and not simply it's array pos:
-          function(d,i) { return d.time; }
+          function(d : any ,i : number) { return d.time; }
       );
+
+  var _this : any = this;
 
   mySelection
       .enter()
       .append("circle")
-      .attr("cx", function(d) { return d.x; })
-      .attr("cy", function(d) { return d.y; })
+      .attr("cx", function(d : any) { return d.x; })
+      .attr("cy", function(d : any) { return d.y; })
       .attr("r", 5)
       .style("stroke", "steelblue")
       .style("stroke-width", 2)
-      .attr("data-celcius", function(d) { return d.temp; })
-      .attr("data-time", function(d) { return d.time; })
+      .attr("data-celcius", function(d : any) { return d.temp; })
+      .attr("data-time", function(d : any) { return d.time; })
       .classed("time-series-marker", true)
       .on(
           "click",
-          function(p) {
-            timePointClick(p);
+          function(p : any) {
+            _this.timePointClick(p);
           }
-      )
+      );
 
   mySelection
       .exit()
@@ -102,17 +121,23 @@ export class SvgSchedulerComponent {
   });
 
   // Now make sure that the entire 24 hours are covered:
-    console.log(this.timePoints)
   // Create a point for 12:01 AM:
   if (this.timePoints[0].x > 0) {
-    this.timePoints.splice(
+
+      var tmpDate = new Date(0)
+      tmpDate.setHours(0);
+      tmpDate.setMinutes(0);
+
+
+
+      this.timePoints.splice(
         0,
         0,
         {
           x: 0
           , y: this.timePoints[0].y
           , temp: this.timePoints[0].temp
-          , time: new Date(0).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          , time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
         }
     )
   }
@@ -122,13 +147,16 @@ export class SvgSchedulerComponent {
 
     var lastTimePoint = this.timePoints[this.timePoints.length-1]
 
-    console.log("need to add a terminal")
+    //console.log("need to add a terminal")
+    var tmpDate = new Date(0)
+    tmpDate.setHours(23);
+    tmpDate.setMinutes(59);
 
     this.timePoints.push({
       x: this.width
       , y: lastTimePoint.y
       , temp: lastTimePoint.temp
-      , time: new Date(this.width).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      , time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
     });
   }
 
@@ -145,7 +173,6 @@ export class SvgSchedulerComponent {
 
 
   var tbl = d3.select("table tbody");
-  //console.log(tbl)
 
   // Clear any existing table rows:
   tbl.selectAll("tr")
@@ -162,23 +189,18 @@ export class SvgSchedulerComponent {
 
   // create a cell in each row for each column
   var cells = rows.selectAll("td")
-      .data(function(row) {
+      .data(function(row : any) {
         return [row.time, row.temp];
       })
       .enter()
       .append("td")
-      .html(function(d) { return d; });
+      .html(function(d : any) { return d; });
 
 } // updateRendered()
 
 
 
   ngOnInit() {
-
-
-
-
-
 
 
 
@@ -233,7 +255,7 @@ export class SvgSchedulerComponent {
           .attr("dy", ".35em")
           .attr("transform", "rotate(-90)")
           .style("text-anchor", "end")
-          .style("display", function (d, i) {
+          .style("display", function (d : any, i : any) {
               return i % 2 === 0 ? "none" : "inherit"
           })
 
@@ -274,21 +296,26 @@ export class SvgSchedulerComponent {
 
 
               if (rawCoords[0] <= _this.margin.left || rawCoords[0] >= _this.margin.left + _this.width) {
-                  currentMouseTemp = '';
+                  currentMouseTemp = 0; //'';
                   currentMouseTime = '';
               }
 
               if (rawCoords[1] <= _this.margin.top || rawCoords[1] >= _this.margin.top + _this.height) {
-                  currentMouseTemp = '';
+                  currentMouseTemp = 0; //'';
                   currentMouseTime = '';
               }
-              //console.log(currentMouseTemp, timeString)
 
           }
-
+      );
 
       // On Click, we want to add data to the array and chart
-      this.svg.on("click", function () {
+
+
+
+
+    this.svg.on(
+        "click",
+        function () {
 
           var coords = d3.mouse(this);
 
@@ -321,11 +348,22 @@ export class SvgSchedulerComponent {
 
           })
 
+          // Sort the timepoints on x-axis position:
+          _this.timePoints.sort(function(a,b) {
+            if (a === b) {
+              return 0;
+            } else {
+              return a.x < b.x ? -1 : 1;
+            }
+
+          });
+
 
           _this.updateRendered();
+          _this.timePointsChangeHandler();
 
-      })
-  )
+
+      });
   }
   /*
 
