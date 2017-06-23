@@ -25,33 +25,26 @@ export class ChamberDataService {
 
    }*/
 
-  getChambers(): Observable<number[]> {
-    return this.chambers.asObservable();
-  }
+    getChambers(): Observable<number[]> {
+        return this.chambers.asObservable();
+    }
 
 
-  setChambers(chambers: number[]) {
-
-    console.log('setChambers called')
-
-    this.chambers.next(chambers);
-  }
+    setChambers(chambers: number[]) {
+        console.log('setChambers called')
+        this.chambers.next(chambers);
+    }
 
 
-  getCurrentChambers(): Observable<number[]> {
+    getCurrentChambers(): Observable<number[]> {
+        return this.currentChambers.asObservable();
+    }
 
-  return this.currentChambers.asObservable();
-}
 
-setCurrentChambers(chambers: number[]) {
-
-    console.log('setCurrentChambers called')
-
-  this.currentChambers.next(chambers);
-
-    console.log(this.currentChambers);
-
-}
+    setCurrentChambers(chambers: number[]) {
+        console.log('setCurrentChambers called', chambers)
+        this.currentChambers.next(chambers);
+    }
 
 
 getDayCount(): number {

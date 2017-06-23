@@ -2,7 +2,7 @@
  * Created by szarecor on 6/7/17.
  */
 
-import {Component, Input, Output, EventEmitter, OnInit} from '@angular/core';
+import {Component, Input, Output, EventEmitter, OnInit, NgZone} from '@angular/core';
 import { ChamberDataService } from './data.service';
 import { ChangeDetectorRef } from '@angular/core';
 
@@ -12,6 +12,7 @@ import { ChangeDetectorRef } from '@angular/core';
     interpolation: ['[[', ']]'],
     templateUrl: './chamber_buttons_template.html'
     //, providers: [ChamberDataService]
+  //, pipes: ['async']
 })
 
 
@@ -19,18 +20,24 @@ export class ChamberButtonsComponent implements OnInit {
 
     chambers: number[] = [];
     currentChambers: number[] = [];
-    cd: any = null;
+    //cd: ChangeDetectorRef;
       // Emit an event for the parent to handle when there is a change to the currently selected chambers:
       @Output() onChambersChange: EventEmitter<any> = new EventEmitter<any>();
-  dataService: any;
+      dataService: any;
+      //zone: NgZone;
+
       // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
       selectedChambersChangeHandler(selectedChambers: string[]) {
         this.onChambersChange.emit(selectedChambers);
       }
 
-  constructor(private cd: ChangeDetectorRef, private ds: ChamberDataService) {
-    this.cd = cd;
+  constructor(private ds: ChamberDataService) {
+    //this.cd = cd;
     this.dataService = ds; //ChamberDataService;
+
+    //this.zone = zone;
+
+
 
     this.dataService.getChambers().subscribe((chambers : number[]) => this.chambers = chambers );
     //this.dataService.getCurrentChambers().subscribe((chambers : number[]) => this.currentChambers = chambers );
@@ -38,11 +45,13 @@ export class ChamberButtonsComponent implements OnInit {
     //let _that = this;
 
     this.dataService.getCurrentChambers().subscribe(function(chambers : number[]) {
-
-      console.log("what is current chambers in buttons comp?");
-      console.log(chambers);
+      console.log('buttons comp receiving', chambers)
       this.currentChambers = chambers;
-      this.cd.markForCheck();
+      //self.zone.run(() => {
+      //  console.log('enabled time travel');
+      //});
+
+      //this.cd.markForCheck();
     });
 
 
@@ -51,31 +60,31 @@ export class ChamberButtonsComponent implements OnInit {
 
   ngOnInit(): void {
 
-
-
-
-
-
-    //console.log("----------------");
-    //console.log(this.chambers);
-    //console.log(this.currentChambers);
-
   }
 
 
     chamberButtonClick(v:any) {
-        var _chambers = this.currentChambers
+
+
+        console.log('click', v);
+
+        var _chambers = this.currentChambers;
+        //this.dataService.setCurrentChambers([])
 
         if (_chambers.indexOf(v) === -1) {
             // Here we are adding a chamber to the selectedChambers []:
+            console.log('pushing')
             _chambers.push(v);
+            _chambers.sort();
 
         } else {
             // And here we are removing a chamber from the selectedChambers []:
+            console.log("removing")
             _chambers = _chambers.filter(function(oldVal) {
                 return oldVal !== v;
             })
         }
+        //this.currentChambers = _chambers;
         this.dataService.setCurrentChambers(_chambers);
 
 

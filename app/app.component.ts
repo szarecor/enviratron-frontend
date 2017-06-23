@@ -1,6 +1,7 @@
 import { Component, Input, Output, OnInit} from '@angular/core';
 import { Subscription } from 'rxjs/Subscription';
 import { ChamberDataService } from './data.service';
+import {Observable} from "rxjs/Observable";
 
 @Component({
   selector: 'my-app',
@@ -14,7 +15,7 @@ import { ChamberDataService } from './data.service';
 
 export class AppComponent implements OnInit {
 
-    currentChambers: number[] = [];
+    currentChambers: Observable<number[]> = [];
     currentDays: string[] = [];
     currentChamberVariable: string;
     currentTimePoints: any[];
@@ -30,6 +31,8 @@ export class AppComponent implements OnInit {
       this.dataService = ChamberDataService;
 
       this.dataService.getChambers().subscribe((chambers : number[]) => this.chambers = chambers );
+
+
       this.dataService.getCurrentChambers().subscribe(function(chambers: number[]) {
           console.log("main component received message", chambers);
         this.currentChambers = chambers;
