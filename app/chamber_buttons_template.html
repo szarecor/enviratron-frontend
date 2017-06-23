@@ -3,9 +3,14 @@
 [[ chambers ]]
 
 <br />
-
+dataService.currentChambers:
 [[ dataService.currentChambers | async ]]
 <br />
+currentChambers:
+[[ currentChambers ]]
+
+<div *ngFor="let cc of currentChambers">[[cc]]</div>
+
 
 <div>
 
@@ -15,7 +20,7 @@
     All
 </label>
 
-<label [ngClass]="{'active': currentChambers.indexOf(chamber) !== -1 }" *ngFor="let chamber of chambers; index as i">
+<label [ngClass]="{'active': currentChambers.indexOf(chamber) !== -1 }" *ngFor="let chamber of chambers ; index as i">
     <input (click)="chamberButtonClick(chamber)" type="checkbox" name="chambers" (value)="chamber" />
     Chamber [[chamber]]
 </label>

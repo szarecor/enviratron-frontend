@@ -5,6 +5,7 @@
 import {Component, Input, Output, EventEmitter, OnInit, NgZone} from '@angular/core';
 import { ChamberDataService } from './data.service';
 import { ChangeDetectorRef } from '@angular/core';
+import {Observable} from "rxjs/Observable";
 
 @Component({
     selector: 'chamber-buttons',
@@ -47,6 +48,7 @@ export class ChamberButtonsComponent implements OnInit {
     this.dataService.getCurrentChambers().subscribe(function(chambers : number[]) {
       console.log('buttons comp receiving', chambers)
       this.currentChambers = chambers;
+      console.log("and", this.currentChambers, this)
       //self.zone.run(() => {
       //  console.log('enabled time travel');
       //});
@@ -58,6 +60,10 @@ export class ChamberButtonsComponent implements OnInit {
   }
 
 
+  ngOnDestroy() {
+    // unsubscribe to ensure no memory leaks
+    this.dataService.unsubscribe();
+  }
   ngOnInit(): void {
 
   }
@@ -66,9 +72,9 @@ export class ChamberButtonsComponent implements OnInit {
     chamberButtonClick(v:any) {
 
 
-        console.log('click', v);
+        console.log('click', v, this.currentChambers, this.currentChambers.indexOf(v));
 
-        var _chambers = this.currentChambers;
+        let _chambers = this.currentChambers;
         //this.dataService.setCurrentChambers([])
 
         if (_chambers.indexOf(v) === -1) {
@@ -84,6 +90,7 @@ export class ChamberButtonsComponent implements OnInit {
                 return oldVal !== v;
             })
         }
+        console.log("click, setting chambers to", _chambers)
         //this.currentChambers = _chambers;
         this.dataService.setCurrentChambers(_chambers);
 
