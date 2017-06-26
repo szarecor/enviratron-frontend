@@ -1,0 +1,51 @@
+
+
+
+<chamber-buttons (onChambersChange)="handleChambersChange($event)">
+</chamber-buttons>
+<hr />
+
+
+<hr />
+
+<chamber-variables-menu (onStateChange)="handleChamberVariablesMenuStateChange($event)"></chamber-variables-menu>
+
+<hr />
+<days-select [dayCount]="dayCount" [selectedDays]="selectedDays" [completedDays]="completedDays" (onDaysChange)="handleDaysChange($event)">
+</days-select>
+
+
+
+<svg-scheduler [selectedDays]="selectedDays" (onTimePointsChange)="handleTimePointsChange($event)"></svg-scheduler>
+
+
+<enviratron-chamber-submit-button></enviratron-chamber-submit-button>
+
+
+
+
+
+
+<br /><br /><br /><br /><br /><br />
+
+<hr />
+<p>Everything below this point is in the parent component</p>
+
+chambers: [[ chambers ]]
+<br />
+
+current chambers: [[ dataService.currentChambers | async ]]
+<br />
+
+current tab state: [[ currentChamberVariable ]]
+<br />
+
+current selected days: [[ currentDays ]]
+<br />
+
+
+time points:
+<ol>
+  <li *ngFor="let point of currentTimePoints">[[ point.temp ]] - [[ point.time ]]</li>
+
+</ol>
