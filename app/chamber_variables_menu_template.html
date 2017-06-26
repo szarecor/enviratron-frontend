@@ -1,0 +1,36 @@
+
+<ul id="chamber_tabs_nav">
+
+  <li (click)="handleClick(item)" *ngFor="let item of menuItems" [ngClass]="{'current': currentState === item }">[[ item ]]</li>
+
+</ul>
+
+<style>
+
+  * {
+
+    font-family: sans-serif;
+  }
+
+  #chamber_tabs_nav {
+
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+
+  }
+
+  #chamber_tabs_nav li {
+    display: inline-block;
+    border: 1px solid #d0d0d0;
+    padding: .4em;
+
+  }
+
+  #chamber_tabs_nav li.current {
+
+    font-weight: bold;
+  }
+
+</style>
+
