@@ -6,6 +6,7 @@ import {Component, Input, Output, EventEmitter, OnInit, NgZone} from '@angular/c
 import { ChamberDataService } from './data.service';
 import { ChangeDetectorRef } from '@angular/core';
 import {Observable} from "rxjs/Observable";
+import { Chamber } from './chamber.interface';
 
 @Component({
     selector: 'chamber-buttons',
@@ -19,8 +20,8 @@ import {Observable} from "rxjs/Observable";
 
 export class ChamberButtonsComponent implements OnInit {
 
-    chambers: number[] = [];
-    currentChambers: number[] = [];
+    chambers: Chamber[] = [];
+    //currentChambers: number[] = [];
     //cd: ChangeDetectorRef;
       // Emit an event for the parent to handle when there is a change to the currently selected chambers:
       @Output() onChambersChange: EventEmitter<any> = new EventEmitter<any>();
@@ -39,13 +40,36 @@ export class ChamberButtonsComponent implements OnInit {
     //this.zone = zone;
 
 
+    let chambers: Chamber[] = [];
 
-    this.dataService.getChambers().subscribe((chambers : number[]) => this.chambers = chambers );
+    for (var i:number=1,l:number=8; i<=l; i++) {
+
+      chambers.push({
+        id: i
+        , isChecked: i < 4 ? true : false
+      })
+
+    }
+    this.dataService.setChambers(chambers);
+    this.chambers = chambers;
+
+    console.log(this.chambers)
+
+    /*
+    this.dataService.getChambers().subscribe(function(chambers : Chamber[]) {
+      this.chambers = chambers;
+
+      console.log("listening for chambers")
+      console.log(this.chambers.filter(function(c) { return c.isChecked === true; }));
+    });
+    */
+
+    //this.dataService.getChambers().subscribe((chambers : Chamber[]) => this.chambers = chambers );
     //this.dataService.getCurrentChambers().subscribe((chambers : number[]) => this.currentChambers = chambers );
     //this.currentChambers = this.dataService.getCurrentChambers();
     //let _that = this;
-
-    this.dataService.getCurrentChambers().subscribe(function(chambers : number[]) {
+/*
+    this.dataService.getCurrentChambers().subscribe(function(chambers : Chamber[]) {
       console.log('buttons comp receiving', chambers)
       this.currentChambers = chambers;
       console.log("and", this.currentChambers, this)
@@ -53,9 +77,8 @@ export class ChamberButtonsComponent implements OnInit {
       //  console.log('enabled time travel');
       //});
 
+ */
       //this.cd.markForCheck();
-    });
-
 
   }
 
@@ -65,44 +88,67 @@ export class ChamberButtonsComponent implements OnInit {
     this.dataService.unsubscribe();
   }
   ngOnInit(): void {
+/*
+        let chambers: Chamber[] = [];
 
+        for (var i:number=1,l:number=8; i<=l; i++) {
+
+
+
+          chambers.push(function(i) {
+
+
+            return {
+              id: i
+                , isChecked: true //i < 4 ? true : false
+            }
+          }(i)
+
+
+          )
+
+        }
+        this.dataService.setChambers(chambers);
+        */
+
+    //this.dataService.getChambers().subscribe(function(chambers : Chamber[]) {
+      //this.chambers = chambers;
+
+      //console.log("listening for chambers")
+      //console.log(this.chambers.filter(function(c) { return c.isChecked === true; }));
+
+    //});
   }
 
 
     chamberButtonClick(v:any) {
+      // TODO: there's too much manual coding of this.chambers here, fix that
 
 
-        console.log('click', v, this.currentChambers, this.currentChambers.indexOf(v));
-
-        let _chambers = this.currentChambers;
-        //this.dataService.setCurrentChambers([])
-
-        if (_chambers.indexOf(v) === -1) {
-            // Here we are adding a chamber to the selectedChambers []:
-            console.log('pushing')
-            _chambers.push(v);
-            _chambers.sort();
-
-        } else {
-            // And here we are removing a chamber from the selectedChambers []:
-            console.log("removing")
-            _chambers = _chambers.filter(function(oldVal) {
-                return oldVal !== v;
-            })
-        }
-        console.log("click, setting chambers to", _chambers)
-        //this.currentChambers = _chambers;
-        this.dataService.setCurrentChambers(_chambers);
 
 
-      // emit the new data to the parent
-      //this.selectedChambersChangeHandler(this.currentChambers);
+      console.log('chamberButtonClick() called');
+      console.log(v);
+      console.log(this.chambers);
+      this.dataService.setChambers(this.chambers);
+      console.log(this.chambers.filter(function(c) { console.log(c.isChecked); c.isChecked == true }))
+
+
+
     }
 
     allChambersButtonClick(ev:any) {
-        //this.currentChambers = (this.currentChambers.length === this.chamberNames.length) ? [] : this.chamberNames;
-          // emit the new data to the parent
-          //this.selectedChambersChangeHandler(this.currentChambers);
+
+        let srcEl = ev.srcElement
+          , newVal = srcEl.checked ? true : false;
+
+        this.chambers.forEach(function(chamber) {
+
+          chamber.isChecked = newVal;
+
+        })
+
+        this.dataService.setChambers(this.chambers);
     }
 
     /*

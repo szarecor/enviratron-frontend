@@ -1,28 +1,22 @@
 
 
-[[ chambers ]]
 
-<br />
-dataService.currentChambers:
-[[ dataService.currentChambers | async ]]
-<br />
-currentChambers:
-[[ currentChambers ]]
-
-<div *ngFor="let cc of currentChambers">[[cc]]</div>
+<div *ngFor="let cc of chambers">[[cc.id]] [[cc.isChecked]]</div>
 
 
 <div>
 
-<label [ngClass]="{'active': currentChambers.length === chambers.length }">
-    <input (click)="allChambersButtonClick($event)" type="checkbox" name="chambers" value="" />
+<label [ngClass]="{'active': false }">
+    <input (keyup)="allChambersButtonClick($event)" type="checkbox" name="chambers" value="" />
     <br />
     All
 </label>
 
-<label [ngClass]="{'active': currentChambers.indexOf(chamber) !== -1 }" *ngFor="let chamber of chambers ; index as i">
-    <input (click)="chamberButtonClick(chamber)" type="checkbox" name="chambers" (value)="chamber" />
-    Chamber [[chamber]]
+<label [ngClass]="{'active': false}" *ngFor="let chamber of chambers ; index as i">
+    <input (click)="chamberButtonClick($event)" type="checkbox" name="chambers" [(ngModel)]="chambers[i].isChecked" />
+    [[ chamber.isChecked ]]
+
+    Chamber [[chamber.id]]
 </label>
 
 
@@ -46,7 +40,7 @@ currentChambers:
     }
 
     input {
-        visibility: hidden;
+        visibility: visible;
     }
 
     label.active {

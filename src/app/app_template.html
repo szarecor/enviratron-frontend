@@ -8,21 +8,19 @@
 
 <hr />
 
-<chamber-variables-menu (onStateChange)="handleChamberVariablesMenuStateChange($event)"></chamber-variables-menu>
+[[ defaultState ]]
+
+<chamber-variables-menu [defaultState]="defaultEnv"></chamber-variables-menu>
 
 <hr />
-<days-select [dayCount]="dayCount" [selectedDays]="selectedDays" [completedDays]="completedDays" (onDaysChange)="handleDaysChange($event)">
-</days-select>
+<days-select [dayCount]="dayCount" [selectedDays]="selectedDays" [completedDays]="completedDays"></days-select>
 
 
 
-<svg-scheduler [selectedDays]="selectedDays" (onTimePointsChange)="handleTimePointsChange($event)"></svg-scheduler>
+<svg-scheduler (onTimePointsChange)="handleTimePointsChange($event)"></svg-scheduler>
 
 
 <enviratron-chamber-submit-button></enviratron-chamber-submit-button>
-
-
-
 
 
 
@@ -31,21 +29,54 @@
 <hr />
 <p>Everything below this point is in the parent component</p>
 
-chambers: [[ chambers ]]
+current enviroment: [[ currentEnvironment | async ]]
+
+
+
 <br />
 
-current chambers: [[ dataService.currentChambers | async ]]
+<!--current chambers: [[ dataService.currentChambers | async ]]-->
+<!--
+<div *ngFor="let cc of chambers | async">[[ cc.id ]] [[ cc.isChecked ]]</div>
+-->
+
+<div *ngFor="let chamber of growthChambers | async">[[chamber.id ]] [[chamber.isChecked]]</div>
 <br />
 
-current tab state: [[ currentChamberVariable ]]
 <br />
 
-current selected days: [[ currentDays ]]
+
+<!--
+selectedDays:
+<div *ngFor="let day of selectedDays | async">[[ day ]]</div>
+-->
+
+<br />
+
+currentDays:
+<div *ngFor="let day of currentDays">[[ day ]]</div>
 <br />
 
 
 time points:
 <ol>
-  <li *ngFor="let point of currentTimePoints">[[ point.temp ]] - [[ point.time ]]</li>
+  <li *ngFor="let point of currentTimePoints">[[ point.type ]] chamber: [[ point.chamberId ]] -- day: [[ point.day ]] -- minutes: [[ point.timePoint ]] -- value: [[ point.value ]]</li>
 
 </ol>
+
+
+And what does the data service hold?
+<ol>
+  <li *ngFor="let point of schedule">[[ point.type ]] chamber: [[ point.chamberId ]] -- day: [[ point.day ]] -- minutes: [[ point.timePoint ]] -- value: [[ point.value ]]</li>
+
+</ol>
+
+<!--
+Object
+chamberId: 1
+day: 7
+timePoint: "12:00 AM"
+type: "Lighting"
+value: 24
+-->
+

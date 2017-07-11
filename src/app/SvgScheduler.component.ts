@@ -2,6 +2,11 @@
  * Created by szarecor on 6/8/17.
  */
 import {Component, Input, Output, EventEmitter} from '@angular/core';
+import { ChamberDataService } from './data.service';
+import { EnvironmentalVariableTimePoint } from './chamber.interface';
+import {BehaviorSubject} from "rxjs/BehaviorSubject";
+
+
 declare var d3 : any;
 
 
@@ -17,7 +22,7 @@ export class SvgSchedulerComponent {
   //@Input() dayCount: number = 0;
 
   @Input() selectedDays: number[] = [];
-
+  dataService : any;
   experimentDaysArray : any[];
   svg : any; //d3.select('svg');
 
@@ -41,11 +46,83 @@ export class SvgSchedulerComponent {
   //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
   @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
 
-  timePointsChangeHandler() {
 
+  chambers : any[] = [];
+  environment : string; //BehaviorSubject<string> = new BehaviorSubject("");
+
+  constructor(private ds: ChamberDataService) {
+
+    let _this = this;
+
+    this.dataService = ds; //ChamberDataService;
+    /*
+     this.dataService.getSelectedDays().subscribe(function(days: any[]) {
+     console.log('days selector comp received', days);
+     this.selectedDays = days;
+
+     });
+     */
+
+    this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
+      _this.environment = env;
+      _this.clearUi();
+
+
+
+    })
+
+/*
+    this.dataService.getChambers().subscribe(function(chambers) {
+
+      let _chambers : any[] = [];
+
+      chambers.forEach(function(chamber) {
+
+        console.log(chamber.isChecked);
+        if (chamber.isChecked) {
+          _chambers.push(chamber)
+        }
+
+      })
+
+      _this.chambers = _chambers;
+
+      //chambers.filter(function(chamber) {
+      //  return chamber.isChecked === true;
+
+      //})
+
+      console.log("this chambers updated in svg!", _this.chambers);
+
+    })
+    */
+
+
+    //this.environment = this.dataService.getCurrentEnvironmentalParameter();
+
+    this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
+      _this.environment = env;
+    })
+
+
+    this.chambers = this.dataService.getChambers().subscribe(function(chambers) {
+      _this.chambers = chambers.filter(function(chamber) {
+
+          return chamber.isChecked == true;
+      });
+
+
+    });
+
+
+
+  }
+
+  timePointsChangeHandler() {
     this.onTimePointsChange.emit(this.timePoints);
 
   }
+
 
   // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
   //selectedDaysChangeHandler(selectedDays: string[]) {
@@ -60,17 +137,39 @@ export class SvgSchedulerComponent {
     //d3.curveStepAfter);
 
 
+
+clearUi() {
+  // Used when switching environment parameter (ie from Humidity to Lighting)
+
+  var s = d3.selectAll('circle');
+  s.remove();
+
+  s = d3.selectAll('path');
+  s.remove();
+
+  this.timePoints = [];
+
+}
+
+
 timePointClick(thisPoint : any) {
+      // We need to remove the first and last synthetic points before adding our new point:
+      this.timePoints.pop()
+      this.timePoints.splice(0, 1);
+
     this.timePoints = this.timePoints.filter(function(p) {
       return !(p.x === thisPoint.x && p.y === thisPoint.y);
     });
 
     this.updateRendered();
     d3.event.stopPropagation();
+    this.timePointsChangeHandler();
 }
 
 
  updateRendered() {
+
+
 
   var mySelection = this.svg.selectAll("circle")
       .data(
@@ -128,16 +227,15 @@ timePointClick(thisPoint : any) {
       tmpDate.setHours(0);
       tmpDate.setMinutes(0);
 
-
-
       this.timePoints.splice(
         0,
         0,
         {
           x: 0
           , y: this.timePoints[0].y
-          , temp: this.timePoints[0].temp
-          , time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          , value: this.timePoints[0].value
+          //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
         }
     )
   }
@@ -147,7 +245,6 @@ timePointClick(thisPoint : any) {
 
     var lastTimePoint = this.timePoints[this.timePoints.length-1]
 
-    //console.log("need to add a terminal")
     var tmpDate = new Date(0)
     tmpDate.setHours(23);
     tmpDate.setMinutes(59);
@@ -155,12 +252,13 @@ timePointClick(thisPoint : any) {
     this.timePoints.push({
       x: this.width
       , y: lastTimePoint.y
-      , temp: lastTimePoint.temp
-      , time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      , value: lastTimePoint.value
+      //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
+
     });
   }
 
-  //console.log(timePoints); //.map(function(p) { return p.x; }))
 
   this.svg.append("path")
       .datum(this.timePoints)
@@ -308,6 +406,22 @@ timePointClick(thisPoint : any) {
           }
       );
 
+
+      /*
+
+       this.currentTimePoints.push({
+       type: currentEnv
+       , timePoint: timePoint.time
+       , day: currentDay
+       , chamberId: currentChamber
+       , value: timePoint.value
+       })
+       */
+
+
+
+
+
       // On Click, we want to add data to the array and chart
 
 
@@ -333,7 +447,13 @@ timePointClick(thisPoint : any) {
               x: Math.round(xScale.invert(coords[0] - _this.margin.left)),
               y: Math.round(yScale.invert(coords[1] - _this.margin.top))
           }
-              , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+              , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+
+              , tmpDate = new Date(newPoint.x)
+              , grossMinutes : number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
+
+
+
 
 
           // We need to remove the first and last synthetic points before adding our new point:
@@ -343,8 +463,8 @@ timePointClick(thisPoint : any) {
           _this.timePoints.push({
               x: coords[0]
               , y: coords[1]
-              , temp: newPoint.y
-              , time: timeString
+              , value: newPoint.y
+              , time: grossMinutes //timeString
 
           })
 
@@ -363,13 +483,58 @@ timePointClick(thisPoint : any) {
           _this.timePointsChangeHandler();
 
 
+          _this.addTimePoint({
+            x: coords[0]
+            , y: coords[1]
+            , value: newPoint.y
+            , time: grossMinutes //timeString
+
+          });
+
+
       });
+  }
+
+
+  addTimePoint(newPoint: any) {
+  let tmpDate = new Date(newPoint.x)
+      , grossMinutes : number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
+
+    let point = {
+      type: this.dataService.currentEnvironmentalParameter
+      , timePoint: newPoint.time
+      , minutes: grossMinutes
+      //, chamberId: currentChamber
+      , value: newPoint.value
+    }
+/*
+    let chambers = this.chambers.filter(function(chamber) {
+
+      return chamber.isChecked === true;
+
+    });
+    */
+
+
+
+/*
+    chambers = chambers.filter(function(chamber) {
+      return chamber.isChecked === true;
+    })
+
+    chambers.forEach(function(chamber) {
+
+
+    })*/
+
+
+
+
+
   }
   /*
 
     function timePointClick(thisPoint) {
-      //console.log(thisPoint);
-      console.log(timePoints);
 
       timePoints = timePoints.filter(function(p) {
 
@@ -377,7 +542,6 @@ timePointClick(thisPoint : any) {
 
       });
 
-      //console.log(timePoints);
 
       updateRendered();
       d3.event.stopPropagation();

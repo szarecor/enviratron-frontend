@@ -6,61 +6,120 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Subject } from 'rxjs/Subject';
 import {BehaviorSubject} from "rxjs/BehaviorSubject";
+import { Chamber } from './chamber.interface';
+
 
 @Injectable()
 export class ChamberDataService {
 
 
-  private chambers = new BehaviorSubject<number[]>([1,2,3,4,5,6,7,8]);
-  private currentChambers = new BehaviorSubject<number[]>([]);
+    private chambers = new BehaviorSubject<Chamber[]>([]);
+    private days : number = 20;
+    private selectedDays = new BehaviorSubject<number[]>([]);
 
-  /*
-   getChambers(): Promise<number[]> {
-
-
+    private currentEnvironmentalParameter? = new BehaviorSubject<string>('');
 
 
-   return Promise.resolve([1, 2, 3, 4, 5, 6, 7, 8])
-   //, 'chamber 4', 'chamber 5', 'chamber 6', 'chamber 7', 'chamber 8'];
+    private timePoints = new BehaviorSubject<any[]>([]);
 
-   }*/
+    private schedule = new BehaviorSubject<any[]>([]);
 
-    getChambers(): Observable<number[]> {
+
+    /* SCHEDULE: */
+
+    setSchedule(schedule: any[]) {
+
+
+      console.log("dataservice received", schedule)
+      this.schedule.next(schedule);
+    }
+
+
+    getSchedule() {
+
+      return this.schedule.asObservable();
+    }
+
+
+    /* CHAMBERS: */
+    getChambers(): Observable<Chamber[]> {
         return this.chambers.asObservable();
     }
 
+/*
+    getSelectedChambers() {
 
-    setChambers(chambers: number[]) {
-        console.log('setChambers called')
+      return this.chambers.filter(function(chamber) {
+
+        return chamber.isChecked === true;
+
+      })
+
+    }
+
+    */
+
+
+    setChambers(chambers: Chamber[]) {
+
+
+        console.log("setChambers called", chambers);
+
         this.chambers.next(chambers);
     }
 
+    /* TIME POINTS */
+    setTimePoints(timePoints: any[]) {
+      this.timePoints.next(timePoints);
+    }
 
-    getCurrentChambers(): Observable<number[]> {
-        return this.currentChambers.asObservable();
+    getTimePoints(): Observable<any[]> {
+
+      return this.timePoints.asObservable();
     }
 
 
-    setCurrentChambers(chambers: number[]) {
-        console.log('setCurrentChambers called', chambers)
-        this.currentChambers.next(chambers);
+    /* DAYS: */
+
+    getDayCount(): number {
+      return this.days;
+    }
+
+    getSelectedDays(): Observable<number[]> {
+      return this.selectedDays.asObservable();
     }
 
 
-getDayCount(): number {
 
-  return 12;
-}
 
-getSelectedDays(): number[] {
-  return [1,5,6,7];
+    setSelectedDays(days: number[]) {
+        this.selectedDays.next(days);
 
-}
+    }
 
-getCompletedDays(): number[] {
+    getCompletedDays(): number[] {
+        return [2];
+    }
 
-  return [2];
-}
+    /* CHAMBER ENVIRONMENT PARAMETERS: */
+
+    getCurrentEnvironmentalParameter() {
+
+      return this.currentEnvironmentalParameter.asObservable();
+    }
+
+    getCurrentEnvironmentalParameterValue() {
+      return this.currentEnvironmentalParameter.value;
+
+    }
+
+    setCurrentEnvironmentalParameter(environment: string) {
+
+
+      this.currentEnvironmentalParameter.next(environment); //{name:environment});
+
+
+    }
 
 
 }

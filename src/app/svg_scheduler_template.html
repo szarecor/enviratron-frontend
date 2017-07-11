@@ -38,6 +38,8 @@
 
   <svg width="800" height="300"></svg>
 
+  <a (click)="clearUi()">clear</a>
+
   <div>
     Current: <span id="mouseCurrentTemp"></span>&deg; C at <span id="mouseCurrentTime"></span>
   </div>
@@ -49,6 +51,7 @@
 
   </ol>
   -->
+  What is the environment? [[ environment ]]
 
   <br />
   [[ selectedDays ]]
@@ -56,6 +59,8 @@
 
   <ol>
     <li *ngFor="let point of timePoints">[[ point.temp ]] - [[ point.time ]]</li>
+
+
 
   </ol>
 
