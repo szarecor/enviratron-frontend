@@ -29,7 +29,7 @@
 <hr />
 <p>Everything below this point is in the parent component</p>
 
-current enviroment: [[ currentEnvironment | async ]]
+current enviroment: [[ currentEnvironment ]]
 
 
 
@@ -40,7 +40,7 @@ current enviroment: [[ currentEnvironment | async ]]
 <div *ngFor="let cc of chambers | async">[[ cc.id ]] [[ cc.isChecked ]]</div>
 -->
 
-<div *ngFor="let chamber of growthChambers | async">[[chamber.id ]] [[chamber.isChecked]]</div>
+<div *ngFor="let chamber of growthChambers">[[chamber.id ]] [[chamber.isChecked]]</div>
 <br />
 
 <br />

@@ -2,13 +2,12 @@
  * Created by szarecor on 6/8/17.
  */
 import {Component, Input, Output, EventEmitter} from '@angular/core';
-import { ChamberDataService } from './data.service';
-import { EnvironmentalVariableTimePoint } from './chamber.interface';
+import {ChamberDataService} from './data.service';
+import {EnvironmentalVariableTimePoint} from './chamber.interface';
 import {BehaviorSubject} from "rxjs/BehaviorSubject";
 
 
-declare var d3 : any;
-
+declare var d3: any;
 
 @Component({
   selector: 'svg-scheduler',
@@ -22,97 +21,76 @@ export class SvgSchedulerComponent {
   //@Input() dayCount: number = 0;
 
   @Input() selectedDays: number[] = [];
-  dataService : any;
-  experimentDaysArray : any[];
-  svg : any; //d3.select('svg');
+  dataService: any;
+  experimentDaysArray: any[];
 
-  margin : any = {top: 20, right: 20, bottom: 40, left: 20};
-  width : number;
-  height : number;
-  //g : any;
-  timePoints : any[] = [];
-  circleAttrs : any = {
-      cx: function(d : any) { return this.xScale(d.x); },
-      cy: function(d : any) { return this.yScale(d.y); },
-      r: 6
-    };
 
-  startDate : any = new Date();
-  endDate : any = new Date();
-  xScale : any;
-  yScale : any;
+  days : any[] = [];
+
+  svg: any; //d3.select('svg');
+
+  margin: any = {top: 20, right: 20, bottom: 40, left: 20};
+  width: number;
+  height: number;
+  timePoints: any[] = [];
+  circleAttrs: any = {
+
+    cx: function (d: any) {
+      return this.xScale(d.x);
+    },
+    cy: function (d: any) {
+      return this.yScale(d.y);
+    },
+    r: 6
+  };
+
+  startDate: any = new Date();
+  endDate: any = new Date();
+  xScale: any;
+  yScale: any;
 
   // Emit an event for the parent to handle when there is a change on the days <select> list:
   //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
   @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
 
 
-  chambers : any[] = [];
-  environment : string; //BehaviorSubject<string> = new BehaviorSubject("");
+  chambers: any[] = [];
+  environment: string; //BehaviorSubject<string> = new BehaviorSubject("");
+
+  line: any = d3.line()
+  .x(function (d: any) {
+    return d.x;
+  })
+  .y(function (d: any) {
+    return d.y;
+  })
+  .curve(d3.curveLinear);
+
 
   constructor(private ds: ChamberDataService) {
 
     let _this = this;
 
-    this.dataService = ds; //ChamberDataService;
-    /*
-     this.dataService.getSelectedDays().subscribe(function(days: any[]) {
-     console.log('days selector comp received', days);
-     this.selectedDays = days;
+    this.dataService = ds;
 
-     });
-     */
-
-    this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
+    this.dataService.getCurrentEnvironmentalParameter().subscribe(function (env) {
       _this.environment = env;
       _this.clearUi();
 
-
-
-    })
-
-/*
-    this.dataService.getChambers().subscribe(function(chambers) {
-
-      let _chambers : any[] = [];
-
-      chambers.forEach(function(chamber) {
-
-        console.log(chamber.isChecked);
-        if (chamber.isChecked) {
-          _chambers.push(chamber)
-        }
-
-      })
-
-      _this.chambers = _chambers;
-
-      //chambers.filter(function(chamber) {
-      //  return chamber.isChecked === true;
-
-      //})
-
-      console.log("this chambers updated in svg!", _this.chambers);
-
-    })
-    */
-
-
-    //this.environment = this.dataService.getCurrentEnvironmentalParameter();
-
-    this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
-      _this.environment = env;
     })
 
 
-    this.chambers = this.dataService.getChambers().subscribe(function(chambers) {
-      _this.chambers = chambers.filter(function(chamber) {
-
-          return chamber.isChecked == true;
+    this.dataService.getChambers().subscribe(function (chambers) {
+      _this.chambers = chambers.filter(function (chamber) {
+        return chamber.isChecked == true;
       });
-
-
     });
+
+    this.dataService.getSelectedDays().subscribe(function(days) {
+      _this.days = days;
+      _this.clearUi();
+
+    })
 
 
 
@@ -120,7 +98,6 @@ export class SvgSchedulerComponent {
 
   timePointsChangeHandler() {
     this.onTimePointsChange.emit(this.timePoints);
-
   }
 
 
@@ -130,98 +107,93 @@ export class SvgSchedulerComponent {
   //}
 
 
-  line : any = d3.line()
-    .x(function(d : any) { return d.x; })
-    .y(function(d : any) { return d.y; })
-    .curve(d3.curveLinear);
-    //d3.curveStepAfter);
+  clearUi() {
+    // Used when switching environment parameter (ie from Humidity to Lighting)
+
+    var s = d3.selectAll('circle');
+    s.remove();
+
+    s = d3.selectAll('path');
+    s.remove();
+
+    this.timePoints = [];
+
+  }
 
 
+  timePointClick(thisPoint: any) {
+    // We need to remove the first and last synthetic points before adding our new point:
+    this.timePoints.pop()
+    this.timePoints.splice(0, 1);
 
-clearUi() {
-  // Used when switching environment parameter (ie from Humidity to Lighting)
-
-  var s = d3.selectAll('circle');
-  s.remove();
-
-  s = d3.selectAll('path');
-  s.remove();
-
-  this.timePoints = [];
-
-}
-
-
-timePointClick(thisPoint : any) {
-      // We need to remove the first and last synthetic points before adding our new point:
-      this.timePoints.pop()
-      this.timePoints.splice(0, 1);
-
-    this.timePoints = this.timePoints.filter(function(p) {
+    this.timePoints = this.timePoints.filter(function (p) {
       return !(p.x === thisPoint.x && p.y === thisPoint.y);
     });
 
     this.updateRendered();
     d3.event.stopPropagation();
     this.timePointsChangeHandler();
-}
+  }
 
 
- updateRendered() {
+  updateRendered() {
 
 
+    var mySelection = this.svg.selectAll("circle")
+    .data(
+      this.timePoints,
+      // tell d3 to bind to a property of the obj and not simply it's array pos:
+      function (d: any, i: number) {
+        return d.time;
+      }
+    );
 
-  var mySelection = this.svg.selectAll("circle")
-      .data(
-          this.timePoints,
-          // tell d3 to bind to a property of the obj and not simply it's array pos:
-          function(d : any ,i : number) { return d.time; }
-      );
+    var _this: any = this;
 
-  var _this : any = this;
+    mySelection
+    .enter()
+    .append("circle")
+    .attr("cx", function (d: any) {
+      return d.x;
+    })
+    .attr("cy", function (d: any) {
+      return d.y;
+    })
+    .attr("r", 5)
+    .style("stroke", "steelblue")
+    .style("stroke-width", 2)
+    .attr("data-celcius", function (d: any) {
+      return d.temp;
+    })
+    .attr("data-time", function (d: any) {
+      return d.time;
+    })
+    .classed("time-series-marker", true)
+    .on(
+      "click",
+      function (p: any) {
+        _this.timePointClick(p);
+      }
+    );
 
-  mySelection
-      .enter()
-      .append("circle")
-      .attr("cx", function(d : any) { return d.x; })
-      .attr("cy", function(d : any) { return d.y; })
-      .attr("r", 5)
-      .style("stroke", "steelblue")
-      .style("stroke-width", 2)
-      .attr("data-celcius", function(d : any) { return d.temp; })
-      .attr("data-time", function(d : any) { return d.time; })
-      .classed("time-series-marker", true)
-      .on(
-          "click",
-          function(p : any) {
-            _this.timePointClick(p);
-          }
-      );
+    mySelection.exit().remove();
 
-  mySelection
-      .exit()
-      .remove();
-
-
-  this.svg.selectAll("path")
-      .data([])
-      .exit()
-      .remove();
+    this.svg.selectAll("path").data([]).exit().remove();
 
 
-  // Sort the timepoints by time before rendering:
-  this.timePoints.sort(function(a,b) {
-    if (a === b) {
-      return 0;
-    } else {
-      return a.x < b.x ? -1 : 1;
-    }
+    // Sort the timepoints by time before rendering:
+    this.timePoints.sort(function (a, b) {
+      if (a === b) {
+        return 0;
+      } else {
+        return a.x < b.x ? -1 : 1;
+      }
 
-  });
+    });
 
-  // Now make sure that the entire 24 hours are covered:
-  // Create a point for 12:01 AM:
-  if (this.timePoints[0].x > 0) {
+    // Now make sure that the entire 24 hours are covered:
+    // Create a point for 12:01 AM:
+    if (this.timePoints[0].x > 0) {
 
       var tmpDate = new Date(0)
       tmpDate.setHours(0);
@@ -237,259 +209,241 @@ timePointClick(thisPoint : any) {
           //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
           , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
         }
-    )
-  }
+      )
+    }
 
-  // And create a point to cover to the right end (midnight):
-  if (this.timePoints[this.timePoints.length-1].time !== '12:00 AM') {
+    // And create a point to cover to the right end (midnight):
+    if (this.timePoints[this.timePoints.length - 1].time !== '12:00 AM') {
 
-    var lastTimePoint = this.timePoints[this.timePoints.length-1]
+      var lastTimePoint = this.timePoints[this.timePoints.length - 1]
 
-    var tmpDate = new Date(0)
-    tmpDate.setHours(23);
-    tmpDate.setMinutes(59);
+      var tmpDate = new Date(0)
+      tmpDate.setHours(23);
+      tmpDate.setMinutes(59);
 
-    this.timePoints.push({
-      x: this.width
-      , y: lastTimePoint.y
-      , value: lastTimePoint.value
-      //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-      , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
+      this.timePoints.push({
+        x: this.width
+        , y: lastTimePoint.y
+        , value: lastTimePoint.value
+        //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
 
+      });
+    }
+
+
+    this.svg.append("path")
+    .datum(this.timePoints)
+    .attr("fill", "none")
+    .attr("stroke", "steelblue")
+    .attr("stroke-linejoin", "round")
+    .attr("stroke-linecap", "round")
+    .attr("stroke-width", 1.5)
+    .attr("d", this.line);
+
+
+    var tbl = d3.select("table tbody");
+
+    // Clear any existing table rows:
+    tbl.selectAll("tr")
+    .data([])
+    .exit()
+    .remove();
+
+    // Render table rows:
+    var rows = tbl.selectAll("tr")
+    .data(this.timePoints)
+    .enter()
+    .append("tr");
+
+
+    // create a cell in each row for each column
+    var cells = rows.selectAll("td")
+    .data(function (row: any) {
+      return [row.time, row.temp];
+    })
+    .enter()
+    .append("td")
+    .html(function (d: any) {
+      return d;
     });
-  }
 
-
-  this.svg.append("path")
-      .datum(this.timePoints)
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-linejoin", "round")
-      .attr("stroke-linecap", "round")
-      .attr("stroke-width", 1.5)
-      .attr("d", this.line);
-
-
-  var tbl = d3.select("table tbody");
-
-  // Clear any existing table rows:
-  tbl.selectAll("tr")
-      .data([])
-      .exit()
-      .remove();
-
-  // Render table rows:
-  var rows = tbl.selectAll("tr")
-      .data(this.timePoints)
-      .enter()
-      .append("tr");
-
-
-  // create a cell in each row for each column
-  var cells = rows.selectAll("td")
-      .data(function(row : any) {
-        return [row.time, row.temp];
-      })
-      .enter()
-      .append("td")
-      .html(function(d : any) { return d; });
-
-} // updateRendered()
-
+  } // updateRendered()
 
 
   ngOnInit() {
 
 
 
-      // Begin the SVG:
-      this.svg = d3.select("svg");
+    // Begin the SVG:
+    this.svg = d3.select("svg");
 
-      this.margin = {top: 20, right: 20, bottom: 40, left: 20};
+    this.margin = {top: 20, right: 20, bottom: 40, left: 20};
 
-      this.width = +this.svg.attr("width") - this.margin.left - this.margin.right;
-      this.height = +this.svg.attr("height") - this.margin.top - this.margin.bottom;
+    this.width = +this.svg.attr("width") - this.margin.left - this.margin.right;
+    this.height = +this.svg.attr("height") - this.margin.top - this.margin.bottom;
 
-      var g = this.svg.append("g").attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
-
-
-      var circleAttrs = {
-          cx: function (d: any) {
-              return this.xScale(d.x);
-          },
-          cy: function (d: any) {
-              return this.yScale(d.y);
-          },
-          r: 6
-      };
-
-      var startDate = new Date();
-      startDate.setHours(0, 0, 0);
-      var endDate = new Date();
-      endDate.setHours(23, 59, 0);
-
-      var xScale = d3.scaleTime()
-          .domain([startDate, endDate])
-          .range([0, this.width]);
-
-      //xScale.ticks(d3.timeMinute.every(10));
+    var g = this.svg.append("g").attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
 
-      var yScale = d3.scaleLinear()
-          .domain([0, 40])
-          .range([this.height, 0]);
+    var circleAttrs = {
+      cx: function (d: any) {
+        return this.xScale(d.x);
+      },
+      cy: function (d: any) {
+        return this.yScale(d.y);
+      },
+      r: 6
+    };
 
-      g.append("g")
-          .attr("transform", "translate(0," + this.height + ")")
-          .attr("class", "grid")
-          .call(
-              d3.axisBottom(xScale)
-                  .ticks(d3.timeMinute.every(30))
-                  .tickSize(-this.height)
-          )
-          .selectAll("text")
-          .attr("y", 0)
-          .attr("x", -5)
-          .attr("dy", ".35em")
-          .attr("transform", "rotate(-90)")
-          .style("text-anchor", "end")
-          .style("display", function (d : any, i : any) {
-              return i % 2 === 0 ? "none" : "inherit"
-          })
+    var startDate = new Date();
+    startDate.setHours(0, 0, 0);
+    var endDate = new Date();
+    endDate.setHours(23, 59, 0);
 
-      g.append("g")
-          .call(
-              d3.axisLeft(yScale)
-              //.ticks(d3.timeMinute.every(30))
-                  .tickSize(-this.width)
-          )
-          .attr("class", "grid")
-          .append("text")
-          .attr("fill", "#000")
-          .attr("transform", "rotate(-90)")
-          .attr("y", 6)
-          .attr("dy", "0.71em")
-          .attr("text-anchor", "end")
-          .text("Celcius");
+    var xScale = d3.scaleTime()
+    .domain([startDate, endDate])
+    .range([0, this.width]);
 
-      var _this = this;
-
-      // Let's track the mouse position!:
-      this.svg.on(
-          "mousemove"
-          , function () {
-
-              var rawCoords = d3.mouse(this);
-
-              // Normally we go from data to pixels, but here we're doing pixels to data
-              var newPoint = {
-                  x: Math.round(xScale.invert(rawCoords[0] - _this.margin.left)),
-                  y: Math.round(yScale.invert(rawCoords[1] - _this.margin.top))
-              }
-                  , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    //xScale.ticks(d3.timeMinute.every(10));
 
 
-              var currentMouseTemp = newPoint.y;
-              var currentMouseTime = timeString;
+    var yScale = d3.scaleLinear()
+    .domain([0, 40])
+    .range([this.height, 0]);
+
+    g.append("g")
+    .attr("transform", "translate(0," + this.height + ")")
+    .attr("class", "grid")
+    .call(
+      d3.axisBottom(xScale)
+      .ticks(d3.timeMinute.every(30))
+      .tickSize(-this.height)
+    )
+    .selectAll("text")
+    .attr("y", 0)
+    .attr("x", -5)
+    .attr("dy", ".35em")
+    .attr("transform", "rotate(-90)")
+    .style("text-anchor", "end")
+    .style("display", function (d: any, i: any) {
+      return i % 2 === 0 ? "none" : "inherit"
+    })
+
+    g.append("g")
+    .call(
+      d3.axisLeft(yScale)
+      //.ticks(d3.timeMinute.every(30))
+      .tickSize(-this.width)
+    )
+    .attr("class", "grid")
+    .append("text")
+    .attr("fill", "#000")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 6)
+    .attr("dy", "0.71em")
+    .attr("text-anchor", "end")
+    .text("Celcius");
+
+    var _this = this;
+
+    // Let's track the mouse position!:
+    this.svg.on(
+      "mousemove"
+      , function () {
+
+        var rawCoords = d3.mouse(this);
+
+        // Normally we go from data to pixels, but here we're doing pixels to data
+        var newPoint   = {
+          x: Math.round(xScale.invert(rawCoords[0] - _this.margin.left)),
+          y: Math.round(yScale.invert(rawCoords[1] - _this.margin.top))
+        }
+          , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
 
-              if (rawCoords[0] <= _this.margin.left || rawCoords[0] >= _this.margin.left + _this.width) {
-                  currentMouseTemp = 0; //'';
-                  currentMouseTime = '';
-              }
-
-              if (rawCoords[1] <= _this.margin.top || rawCoords[1] >= _this.margin.top + _this.height) {
-                  currentMouseTemp = 0; //'';
-                  currentMouseTime = '';
-              }
-
-          }
-      );
+        var currentMouseTemp = newPoint.y;
+        var currentMouseTime = timeString;
 
 
-      /*
+        if (rawCoords[0] <= _this.margin.left || rawCoords[0] >= _this.margin.left + _this.width) {
+          currentMouseTemp = 0; //'';
+          currentMouseTime = '';
+        }
 
-       this.currentTimePoints.push({
-       type: currentEnv
-       , timePoint: timePoint.time
-       , day: currentDay
-       , chamberId: currentChamber
-       , value: timePoint.value
-       })
-       */
+        if (rawCoords[1] <= _this.margin.top || rawCoords[1] >= _this.margin.top + _this.height) {
+          currentMouseTemp = 0; //'';
+          currentMouseTime = '';
+        }
+
+      }
+    );
 
 
 
-
-
-      // On Click, we want to add data to the array and chart
-
-
+    // On Click, we want to add data to the array and chart
 
 
     this.svg.on(
-        "click",
-        function () {
+      "click",
+      function () {
 
-          var coords = d3.mouse(this);
+        var coords = d3.mouse(this);
 
-          // Make sure we don't draw any points outside of the graph area:
-          if (coords[0] <= _this.margin.left || coords[0] >= _this.margin.left + _this.width) {
-              return;
+        // Make sure we don't draw any points outside of the graph area:
+        if (coords[0] <= _this.margin.left || coords[0] >= _this.margin.left + _this.width) {
+          return;
+        }
+
+        if (coords[1] <= _this.margin.top || coords[1] >= _this.margin.top + _this.height) {
+          return;
+        }
+
+        // Normally we go from data to pixels, but here we're doing pixels to data
+        var newPoint             = {
+          x: Math.round(xScale.invert(coords[0] - _this.margin.left)),
+          y: Math.round(yScale.invert(coords[1] - _this.margin.top))
+        }
+          , timeString           = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+
+          , tmpDate              = new Date(newPoint.x)
+          , grossMinutes: number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
+
+
+        // We need to remove the first and last synthetic points before adding our new point:
+        _this.timePoints.pop()
+        _this.timePoints.splice(0, 1);
+
+        _this.timePoints.push({
+          x: coords[0]
+          , y: coords[1]
+          , value: newPoint.y
+          , time: grossMinutes //timeString
+
+        })
+
+        // Sort the timepoints on x-axis position:
+        _this.timePoints.sort(function (a, b) {
+          if (a === b) {
+            return 0;
+          } else {
+            return a.x < b.x ? -1 : 1;
           }
 
-          if (coords[1] <= _this.margin.top || coords[1] >= _this.margin.top + _this.height) {
-              return;
-          }
-
-          // Normally we go from data to pixels, but here we're doing pixels to data
-          var newPoint = {
-              x: Math.round(xScale.invert(coords[0] - _this.margin.left)),
-              y: Math.round(yScale.invert(coords[1] - _this.margin.top))
-          }
-              , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
-
-              , tmpDate = new Date(newPoint.x)
-              , grossMinutes : number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
+        });
 
 
+        _this.updateRendered();
+        _this.timePointsChangeHandler();
 
 
+        _this.addTimePoint({
+          x: coords[0]
+          , y: coords[1]
+          , value: newPoint.y
+          , time: grossMinutes //timeString
 
-          // We need to remove the first and last synthetic points before adding our new point:
-          _this.timePoints.pop()
-          _this.timePoints.splice(0, 1);
-
-          _this.timePoints.push({
-              x: coords[0]
-              , y: coords[1]
-              , value: newPoint.y
-              , time: grossMinutes //timeString
-
-          })
-
-          // Sort the timepoints on x-axis position:
-          _this.timePoints.sort(function(a,b) {
-            if (a === b) {
-              return 0;
-            } else {
-              return a.x < b.x ? -1 : 1;
-            }
-
-          });
-
-
-          _this.updateRendered();
-          _this.timePointsChangeHandler();
-
-
-          _this.addTimePoint({
-            x: coords[0]
-            , y: coords[1]
-            , value: newPoint.y
-            , time: grossMinutes //timeString
-
-          });
+        });
 
 
       });
@@ -497,58 +451,17 @@ timePointClick(thisPoint : any) {
 
 
   addTimePoint(newPoint: any) {
-  let tmpDate = new Date(newPoint.x)
-      , grossMinutes : number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
-
-    let point = {
-      type: this.dataService.currentEnvironmentalParameter
-      , timePoint: newPoint.time
-      , minutes: grossMinutes
-      //, chamberId: currentChamber
-      , value: newPoint.value
-    }
-/*
-    let chambers = this.chambers.filter(function(chamber) {
-
-      return chamber.isChecked === true;
-
-    });
-    */
-
-
-
-/*
-    chambers = chambers.filter(function(chamber) {
-      return chamber.isChecked === true;
-    })
-
-    chambers.forEach(function(chamber) {
-
-
-    })*/
-
-
-
-
-
+    let tmpDate = new Date(newPoint.x)
+      , grossMinutes: number = (tmpDate.getHours() * 60) + tmpDate.getMinutes()
+      , point = {
+		        type: this.dataService.currentEnvironmentalParameter
+            , timePoint: newPoint.time
+            , minutes: grossMinutes
+            //, chamberId: currentChamber
+            , value: newPoint.value
+      }
   }
-  /*
 
-    function timePointClick(thisPoint) {
-
-      timePoints = timePoints.filter(function(p) {
-
-        return !(p.x === thisPoint.x && p.y === thisPoint.y);
-
-      });
-
-
-      updateRendered();
-      d3.event.stopPropagation();
-    }
-
-  //}
-*/
 
 }
 
