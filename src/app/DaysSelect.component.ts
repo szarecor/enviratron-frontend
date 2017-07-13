@@ -37,7 +37,7 @@ export class DaysSelectComponent  {
 
     let _this = this;
 
-    this.dataService.getSelectedDays().subscribe(function(days: any[]) {
+    this.dataService.getDays().subscribe(function(days: any[]) {
 
       _this.selectedDays = days;
 

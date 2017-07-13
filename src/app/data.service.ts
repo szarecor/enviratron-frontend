@@ -14,6 +14,9 @@ export class ChamberDataService {
 
 
     private chambers = new BehaviorSubject<Chamber[]>([]);
+
+    private selectedChamberIds = new BehaviorSubject<number[]>([]);
+
     private days : number = 20;
     private selectedDays = new BehaviorSubject<number[]>([]);
 
@@ -46,23 +49,25 @@ export class ChamberDataService {
         return this.chambers.asObservable();
     }
 
-/*
+
     getSelectedChambers() {
+      console.log("getSelectedChambers called")
 
-      return this.chambers.filter(function(chamber) {
+      //this.selectedChambers.next(this.chambers.value.filter((c) => c.isChecked));
 
-        return chamber.isChecked === true;
+      return this.selectedChamberIds.asObservable(); //.value.filter(chamber => chamber.isChecked).asObservable();
 
-      })
+
 
     }
 
-    */
-
-
     setChambers(chambers: Chamber[]) {
-
+        console.log("setChambers called")
+        console.log(chambers.filter((c) => c.isChecked));
+        console.log("")
         this.chambers.next(chambers);
+        this.selectedChamberIds.next(chambers.filter((c) => c.isChecked).map(c => c.id));
+
     }
 
     /* TIME POINTS */
@@ -82,7 +87,7 @@ export class ChamberDataService {
       return this.days;
     }
 
-    getSelectedDays(): Observable<number[]> {
+    getDays(): Observable<number[]> {
       return this.selectedDays.asObservable();
     }
 

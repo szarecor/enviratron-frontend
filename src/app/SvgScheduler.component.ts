@@ -82,7 +82,8 @@ export class SvgSchedulerComponent {
   @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
 
 
-  chambers: any[] = [];
+  growthChambers: any[] = [];
+  growthChambers2: any[] = [];
   environment: string; //BehaviorSubject<string> = new BehaviorSubject("");
 
   line: any = d3.line()
@@ -96,20 +97,125 @@ export class SvgSchedulerComponent {
 
 
   constructor(private ds: ChamberDataService) {
-
-    let _this = this;
-
     this.dataService = ds;
-
-
-
-
 
   }
 
+
+  ngOnInit() {
+
+
+    let _this = this;
+
+    //console.log(this.timePoints)
+
+    //console.log("ngOnInit() called")
+
+    this.dataService.getCurrentEnvironmentalParameter().subscribe(function (env) {
+
+      // TODO: what's the best way to NOT run clearUi onInit?
+      let currentEnvironment = _this.environment
+
+      //console.log("receiving new env", env)
+      _this.environment = env;
+
+
+      if (currentEnvironment) {
+        _this.clearUi();
+      }
+
+      _this.loadData()
+
+    })
+
+
+    this.dataService.getSelectedChambers().subscribe(function (chambers) {
+
+      //alert("what do we do here to combine data across chambers?")
+
+      console.log(chambers);
+
+      _this.growthChambers = chambers
+
+
+      /*
+      window.setTimeout(function() {
+
+        _this.growthChambers = chambers.map(c => c).filter(c => c.isChecked);
+        console.log("timeout complete"
+
+      )}, 100);
+	    */
+
+
+
+      /*
+      _this.growthChambers = chambers.filter(function (chamber) {
+        console.log(chamber.isChecked);
+        // TODO: why is the chamber state always one-click behind?
+        //console.log(chamber, chamber.isChecked);
+        return chamber.isChecked != true;
+      });
+*/
+      console.log(_this.growthChambers);
+      console.log("####################")
+
+
+
+      _this.loadData()
+
+    });
+
+
+    this.dataService.getSchedule().subscribe(function (schedule: any[]) {
+      _this.schedule = schedule;
+
+
+      _this.loadData()
+
+    })
+
+
+    this.dataService.getDays().subscribe(function (days) {
+
+      console.log("Svg component received new days", days)
+      console.log(_this.schedule);
+
+      let previousDaysSelection = _this.days;
+      _this.days = days;
+
+      if (previousDaysSelection.length === 0) {
+        return;
+
+      }
+
+      previousDaysSelection = previousDaysSelection.sort(function (d1: number, d2: number) {
+
+        if (d1 === d2) {
+          return 0;
+        }
+        return d1 < d2 ? -1 : 1;
+
+      })
+
+
+      //console.log(_this.timePoints);
+
+      _this.clearUi();
+      _this.loadData();
+
+
+
+    })
+
+    //_this.loadData()
+    _this.initSvg();
+
+  } // end ngOnInit()
+
+
   timePointsChangeHandler() {
 
-    console.log("emitting", this.timePoints)
     this.onTimePointsChange.emit(this.timePoints);
   }
 
@@ -122,7 +228,6 @@ export class SvgSchedulerComponent {
 
   clearUi() {
     // Used when switching environment parameter (ie from Humidity to Lighting)
-    console.log("clearUi called")
     var s = d3.selectAll('circle');
     s.remove();
 
@@ -136,23 +241,15 @@ export class SvgSchedulerComponent {
 
   timePointClick(thisPoint: any) {
 
-    console.log(thisPoint);
     // We need to remove the first and last synthetic points before adding our new point:
     this.timePoints.pop()
     this.timePoints.splice(0, 1);
 
 
-    console.log(this)
-    console.log(this.timePoints.length)
 
     this.timePoints = this.timePoints.filter(function (p) {
       return !(p.x === thisPoint.x && p.y === thisPoint.y);
     });
-
-
-
-
-    console.log(this.timePoints.length)
 
     d3.event.stopPropagation();
     this.updateRendered();
@@ -163,16 +260,12 @@ export class SvgSchedulerComponent {
 
   updateRendered() {
 
-    console.log("updateRendered called", this.timePoints.length)
-
-
     this.svg.selectAll("path").data([]).exit().remove();
     this.svg.selectAll("circle").data([]).exit().remove();
 
     // Sort the timepoints by time before rendering:
 
 
-    console.log(this.timePoints)
 
     this.timePoints.sort(function (a, b) {
       if (a === b) {
@@ -183,7 +276,6 @@ export class SvgSchedulerComponent {
 
     });
 
-    console.log(this.timePoints);
 
     // Now make sure that the entire 24 hours are covered:
     // Create a point for 12:01 AM:
@@ -273,40 +365,12 @@ export class SvgSchedulerComponent {
     .on(
       "click",
       function (p: any) {
-        console.log("time point click should be called")
         _this.timePointClick(p);
       }
     );
 
     mySelection.exit().remove();
-/*
-    var tbl = d3.select("table tbody");
 
-    // Clear any existing table rows:
-    tbl.selectAll("tr")
-    .data([])
-    .exit()
-    .remove();
-
-    // Render table rows:
-    var rows = tbl.selectAll("tr")
-    .data(this.timePoints)
-    .enter()
-    .append("tr");
-
-
-    // create a cell in each row for each column
-    var cells = rows.selectAll("td")
-    .data(function (row: any) {
-      return [row.time, row.temp];
-    })
-    .enter()
-    .append("td")
-    .html(function (d: any) {
-      return d;
-    });
-
-    */
 
   } // updateRendered()
 
@@ -317,16 +381,19 @@ export class SvgSchedulerComponent {
 
 
     //console.log("---------------")
-    console.log("loadData called")
-    console.log(this.timePoints)
+    //console.log("loadData called")
+    //console.log(this.timePoints)
     //console.log(this.environment)
     //console.log(this.chambers)
     //console.log(this.days)
 
     //console.log("---------------")
 
+    let _this = this;
 
-    let chamberIds = this.chambers.map(function(chamber) { return chamber.id; })
+    let chamberIds = _this.growthChambers.filter(chamber => chamber.isChecked == true ).map(function(chamber) { return chamber.id; })
+
+    console.log("AND WHAT IS CHAMBERIDS?", chamberIds)
         //, days = this.days;
 
     let dataPoints = this.schedule.filter(function(dp) {
@@ -373,8 +440,8 @@ export class SvgSchedulerComponent {
     }
 
 
-    console.log("filtered data is")
-    console.log(dataPoints)
+    //console.log("filtered data is")
+    //console.log(dataPoints)
 
 
     if (dataPoints.length > 0) {
@@ -390,160 +457,19 @@ export class SvgSchedulerComponent {
 
 
 
-  ngOnInit() {
 
-
-
-
-    let _this = this;
-
-    //console.log(this.timePoints)
-
-    this.dataService.getCurrentEnvironmentalParameter().subscribe(function (env) {
-
-      // TODO: what's the best way to NOT run clearUi onInit?
-      let currentEnvironment = _this.environment
-
-      //console.log("receiving new env", env)
-      _this.environment = env;
-
-
-      if (currentEnvironment) {
-        _this.clearUi();
-      }
-
-      _this.loadData()
-
-    })
-
-
-    this.dataService.getChambers().subscribe(function (chambers) {
-
-      //alert("what do we do here to combine data across chambers?")
-
-      _this.chambers = chambers.filter(function (chamber) {
-
-        // TODO: why is the chamber state always one-click behind?
-        //console.log(chamber, chamber.isChecked);
-        return chamber.isChecked == true;
-      });
-
-      _this.loadData()
-
-    });
-
-
-    this.dataService.getSchedule().subscribe(function(schedule : any[]) {
-      _this.schedule = schedule;
-
-
-      _this.loadData()
-
-    })
-
-
-
-    this.dataService.getSelectedDays().subscribe(function(days) {
-
-      let previousDaysSelection = _this.days;
-      _this.days = days;
-
-      if (previousDaysSelection.length === 0) {
-        return;
-
-      }
-
-      previousDaysSelection = previousDaysSelection.sort(function(d1 : number, d2 : number) {
-
-        if (d1 === d2) {
-          return 0;
-        }
-        return d1 < d2 ? -1 : 1;
-
-      })
-
-
-
-
-
-      //console.log(_this.timePoints);
-
-      _this.clearUi();
-
-      _this.loadData()
-
-/*
-      // Now we want to update the UI to extend the value from the previous day across the day(s) at hand:
-      console.log(previousDaysSelection);
-      console.log(_this.days);
-      console.log(_this.schedule)
-
-      let _days = _this.days.sort(function(d1 : number, d2 : number) {
-
-        if (d1 === d2) {
-          return 0;
-        }
-        return d1 < d2 ? -1 : 1;
-
-      }) // sort()
-
-      let firstSelectedDay = _days[0];
-
-      let lastPreviousDay = previousDaysSelection.pop();
-
-
-      console.log(firstSelectedDay, lastPreviousDay)
-
-      let currentChamberIds = _this.chambers.map(function(chamber) { return chamber.id; })
-
-      console.log(currentChamberIds);
-
-      _this.schedule.forEach(function(tp) {
-
-        console.log(tp.chamberId, currentChamberIds.indexOf(tp.chamberId) > -1);
-      })
-
-      // We need to filter the existing schedule based on chambers and environmental paramater:
-      let relevantSchedule = _this.schedule.filter(function(tp) {
-
-        if (tp.day !== lastPreviousDay) {
-          console.log(tp.day, lastPreviousDay, tp.day === lastPreviousDay)
-          return false;
-        }
-
-
-        if (currentChamberIds.indexOf(tp.chamberId) === -1) {
-          return false;
-        }
-
-        if (tp.type != _this.environment) {
-          return false;
-        }
-
-
-        return true;
-
-      });
-
-
-
-
-      console.log("RELEVANT SCHEDULE:");
-      console.log(relevantSchedule);
-
-      */
-
-
-    })
-
+    initSvg() {
+    // this function handles the initial rendering and bootstrapping of the the D3 SVG
 
     // Begin the SVG:
-    this.svg = d3.select("svg");
+    let _this = this;
+      this.svg = d3.select("svg");
 
-    this.margin = {top: 20, right: 20, bottom: 40, left: 20};
+      this.margin = {top: 20, right: 20, bottom: 40, left: 20};
 
-    this.width = +this.svg.attr("width") - this.margin.left - this.margin.right;
-    this.height = +this.svg.attr("height") - this.margin.top - this.margin.bottom;
+      this.width = +this.svg.attr("width") - this.margin.left - this.margin.right;
+      this.height = +this.svg.attr("height") - this.margin.top - this.margin.bottom;
+
 
     var g = this.svg.append("g").attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
@@ -563,14 +489,12 @@ export class SvgSchedulerComponent {
     var endDate = new Date();
     endDate.setHours(23, 59, 0);
 
-    var xScale = d3.scaleTime()
+    _this.xScale = d3.scaleTime()
     .domain([startDate, endDate])
     .range([0, this.width]);
 
     //xScale.ticks(d3.timeMinute.every(10));
-
-
-    var yScale = d3.scaleLinear()
+      _this.yScale = d3.scaleLinear()
     .domain([0, 40])
     .range([this.height, 0]);
 
@@ -578,7 +502,7 @@ export class SvgSchedulerComponent {
     .attr("transform", "translate(0," + this.height + ")")
     .attr("class", "grid")
     .call(
-      d3.axisBottom(xScale)
+      d3.axisBottom(_this.xScale)
       .ticks(d3.timeMinute.every(30))
       .tickSize(-this.height)
     )
@@ -594,7 +518,7 @@ export class SvgSchedulerComponent {
 
     g.append("g")
     .call(
-      d3.axisLeft(yScale)
+      d3.axisLeft(_this.yScale)
       //.ticks(d3.timeMinute.every(30))
       .tickSize(-this.width)
     )
@@ -610,113 +534,19 @@ export class SvgSchedulerComponent {
 
     // Let's track the mouse position!:
     this.svg.on(
-      "mousemove"
-      , function () {
-
-        var rawCoords = d3.mouse(this);
-
-        // Normally we go from data to pixels, but here we're doing pixels to data
-        var newPoint   = {
-          x: Math.round(xScale.invert(rawCoords[0] - _this.margin.left)),
-          y: Math.round(yScale.invert(rawCoords[1] - _this.margin.top))
-        }
-          , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-
-
-        var currentMouseTemp = newPoint.y;
-        var currentMouseTime = timeString;
-
-
-        if (rawCoords[0] <= _this.margin.left || rawCoords[0] >= _this.margin.left + _this.width) {
-          currentMouseTemp = 0; //'';
-          currentMouseTime = '';
-        }
-
-        if (rawCoords[1] <= _this.margin.top || rawCoords[1] >= _this.margin.top + _this.height) {
-          currentMouseTemp = 0; //'';
-          currentMouseTime = '';
-        }
-
-
-           _this.currentTime = currentMouseTime;
-          _this.currentValue = currentMouseTemp;
-
+      "mousemove",
+      function () {
+        _this.svgOnMouseMove(this);
       }
     );
 
 
 
     // On Click, we want to add data to the array and chart
-
-
     this.svg.on(
       "click",
       function () {
-
-        console.log("svg click recorded?")
-
-        var coords = d3.mouse(this);
-
-        // Make sure we don't draw any points outside of the graph area:
-        if (coords[0] <= _this.margin.left || coords[0] >= _this.margin.left + _this.width) {
-          return;
-        }
-
-        if (coords[1] <= _this.margin.top || coords[1] >= _this.margin.top + _this.height) {
-          return;
-        }
-
-        // Normally we go from data to pixels, but here we're doing pixels to data
-        var newPoint             = {
-          x: Math.round(xScale.invert(coords[0] - _this.margin.left)),
-          y: Math.round(yScale.invert(coords[1] - _this.margin.top))
-        }
-          , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
-
-          , tmpDate = new Date(newPoint.x)
-          , grossMinutes: number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
-
-
-        // We need to remove the first and last synthetic points before adding our new point:
-        _this.timePoints.pop()
-        _this.timePoints.splice(0, 1);
-
-        _this.timePoints.push({
-          x: coords[0]
-          , y: coords[1]
-          , value: newPoint.y
-          , time: grossMinutes //timeString
-
-        })
-
-        // Sort the timepoints on x-axis position:
-        _this.timePoints.sort(function (a, b) {
-          if (a === b) {
-            return 0;
-          } else {
-            return a.x < b.x ? -1 : 1;
-          }
-
-        });
-
-
-        console.log("Before calling updateRendered")
-        console.log(_this.timePoints[_this.timePoints.length-2])
-
-
-        _this.updateRendered();
-        _this.timePointsChangeHandler();
-
-/*
-        _this.addTimePoint({
-          x: coords[0]
-          , y: coords[1]
-          , value: newPoint.y
-          , time: grossMinutes //timeString
-
-        });
-        */
-
+        _this.svgOnClick(this);
       });
 
 
@@ -727,24 +557,104 @@ export class SvgSchedulerComponent {
       this.updateRendered();
 
     }
-  } // end onInit() method
-
-/*
-  addTimePoint(newPoint: any) {
+  } // end renderSvg() method
 
 
+  svgOnMouseMove(elRef) {
 
-    let tmpDate = new Date(newPoint.x)
-      , grossMinutes: number = (tmpDate.getHours() * 60) + tmpDate.getMinutes()
-      , point = {
-		        type: this.dataService.currentEnvironmentalParameter
-            , timePoint: newPoint.time
-            , minutes: grossMinutes
-            //, chamberId: currentChamber
-            , value: newPoint.value
-      }
+    var rawCoords = d3.mouse(elRef);
+    let _this = this;
+
+    // Normally we go from data to pixels, but here we're doing pixels to data
+    var newPoint   = {
+      x: Math.round(_this.xScale.invert(rawCoords[0] - _this.margin.left)),
+      y: Math.round(_this.yScale.invert(rawCoords[1] - _this.margin.top))
+    }
+      , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+
+
+    var currentMouseTemp = newPoint.y;
+    var currentMouseTime = timeString;
+
+
+    if (rawCoords[0] <= _this.margin.left || rawCoords[0] >= _this.margin.left + _this.width) {
+      currentMouseTemp = 0; //'';
+      currentMouseTime = '';
+    }
+
+    if (rawCoords[1] <= _this.margin.top || rawCoords[1] >= _this.margin.top + _this.height) {
+      currentMouseTemp = 0; //'';
+      currentMouseTime = '';
+    }
+
+
+    _this.currentTime = currentMouseTime;
+    _this.currentValue = currentMouseTemp;
+
   }
 
- */
+
+
+  svgOnClick(elRef) {
+
+    let _this = this;
+
+    console.log("svg click recorded?")
+    console.log(elRef)
+
+    var coords = d3.mouse(elRef);
+    console.log(coords)
+
+    // Make sure we don't draw any points outside of the graph area:
+    if (coords[0] <= _this.margin.left || coords[0] >= _this.margin.left + _this.width) {
+      return;
+    }
+
+    if (coords[1] <= _this.margin.top || coords[1] >= _this.margin.top + _this.height) {
+      return;
+    }
+
+    // Normally we go from data to pixels, but here we're doing pixels to data
+    var newPoint             = {
+      x: Math.round(_this.xScale.invert(coords[0] - _this.margin.left)),
+      y: Math.round(_this.yScale.invert(coords[1] - _this.margin.top))
+    }
+      , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+
+      , tmpDate = new Date(newPoint.x)
+      , grossMinutes: number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
+
+
+    // We need to remove the first and last synthetic points before adding our new point:
+    _this.timePoints.pop()
+    _this.timePoints.splice(0, 1);
+
+    _this.timePoints.push({
+      x: coords[0]
+      , y: coords[1]
+      , value: newPoint.y
+      , time: grossMinutes //timeString
+
+    })
+
+    // Sort the timepoints on x-axis position:
+    _this.timePoints.sort(function (a, b) {
+      if (a === b) {
+        return 0;
+      } else {
+        return a.x < b.x ? -1 : 1;
+      }
+
+    });
+
+
+    console.log("Before calling updateRendered")
+    console.log(_this.timePoints[_this.timePoints.length-2])
+
+
+    _this.updateRendered();
+    _this.timePointsChangeHandler();
+  }
+
 
 }

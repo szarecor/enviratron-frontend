@@ -72,7 +72,9 @@ export class AppComponent implements OnInit {
         this.dayCount = this.dataService.getDayCount();
 
 
-        this.dataService.getSelectedDays().subscribe(function(days) {
+        this.dataService.getDays().subscribe(function(days) {
+          console.log("main comp receiving days", days)
+
           _this.currentDays = days;
 
         })
@@ -274,7 +276,7 @@ export class AppComponent implements OnInit {
 
       // Now, push the ordered time point data to the data service:
 
-      console.log("what are we pushing to the service?", this.currentTimePoints[0])
+      //console.log("what are we pushing to the service?", this.currentTimePoints[0])
 
       this.dataService.setSchedule(this.currentTimePoints);
 
