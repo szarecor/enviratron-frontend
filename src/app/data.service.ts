@@ -30,7 +30,7 @@ export class ChamberDataService {
     setSchedule(schedule: any[]) {
 
 
-      console.log("dataservice received", schedule)
+      //console.log("dataservice received", schedule)
       this.schedule.next(schedule);
     }
 
@@ -62,9 +62,6 @@ export class ChamberDataService {
 
     setChambers(chambers: Chamber[]) {
 
-
-        console.log("setChambers called", chambers);
-
         this.chambers.next(chambers);
     }
 
@@ -93,6 +90,8 @@ export class ChamberDataService {
 
 
     setSelectedDays(days: number[]) {
+
+        //console.log("new selectedDays:", days)
         this.selectedDays.next(days);
 
     }

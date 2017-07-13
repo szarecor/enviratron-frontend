@@ -26,7 +26,7 @@ export class AppComponent implements OnInit {
 
     //selectedDays = new Observable<number[]>(); //[1,5,6,7];
 
-    currentDays : any[] = [];
+    currentDays : any[] = [1];
     completedDays : number[] = []; //[2,3,4];
     growthChambers: any[] = []; // new Observable<Chamber[]>(); //[1,5,6,7];
     currentEnvironment? : string = ''; //new Observable<string>();
@@ -46,7 +46,6 @@ export class AppComponent implements OnInit {
       //this.dataService.setCurrentEnvironmentalParameter('lighting')
 
       this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
-        console.log("app receiving new env!", env);
         _this.currentEnvironment = env;
 
       })
@@ -63,7 +62,11 @@ export class AppComponent implements OnInit {
 
 
 
+
+
         let _this = this;
+
+        this.dataService.setSelectedDays(this.currentDays)
 
         // TODO: this should get refactored generally to be less ugly:
         this.dayCount = this.dataService.getDayCount();
@@ -87,6 +90,9 @@ export class AppComponent implements OnInit {
     handleTimePointsChange(newState: any[]) {
       // This gets called via an @Output param event emitter on the <svg-scheduler> component:
       // We need to pull values out of our Observables:
+
+      console.log("receiving newState via emiitter", newState)
+
       let currentEnv: string = this.currentEnvironment
         , currentChambers: Chamber[] = this.growthChambers.filter(function(chamber) {
               return chamber.isChecked;
@@ -94,17 +100,70 @@ export class AppComponent implements OnInit {
 
 
         , currentChamberIds : any[] = currentChambers.map(function(chamber) {
-          console.log(chamber, chamber.id);
           return chamber.id;
       })
 
 
       if (currentChamberIds.length === 0 || this.currentDays.length === 0 || currentEnv == '') {
-        console.log("returning prematurely", this.currentDays);
         return;
       }
 
+      //console.log("what is new state?")
+      //console.log(newState)
+      //console.log("what is current state?")
+      //console.log(this.currentTimePoints)
+
+
+
+      let newStateDays = newState.map(function(dp) {
+
+        return dp.day;
+
+      }).filter((v, i, a) => a.indexOf(v) === i);
+
+
+      //console.log("what is newStateDays?", newStateDays);
+
+
+      console.log("--------------")
+      console.log(this.currentEnvironment)
+      console.log(currentChamberIds)
+      console.log(this.currentDays)
+      console.log(this.schedule)
+      console.log("what is currentTimePoints?", this.currentTimePoints)
+      console.log("--------------")
+
+
+
+
       // We need to filter out anything from currentTimePoints that is covered by the current chamber, day, variable state:
+      this.currentTimePoints = this.currentTimePoints.filter(function(tp) {
+
+
+        if (currentChamberIds.indexOf(tp.chamberId) > -1 && this.currentDays.indexOf(tp.day) > -1 && tp.type == this.currentEnvironment) {
+
+          return false;
+        }
+        /*
+        if (this.currentDays.indexOf(tp.day) > -1) {
+
+          return false;
+        }
+
+        if (tp.type == this.currentEnvironment) {
+
+          return false;
+        }
+	      */
+
+         return true;
+
+      }, this);
+
+
+      console.log("what is filtered list?", this.currentTimePoints.length)
+
+
 
       let _this = this;
 
@@ -114,7 +173,15 @@ export class AppComponent implements OnInit {
         var currentDay: number, currentChamber: number;
 
 
+
+
+
         // We want to insert a timePoint for each chamber and day when chambers or days are being edited in bulk:
+        //console.log("WHAT IS TIMEPOINT?")
+        //console.log(timePoint)
+
+
+
 
         for (let i=0, l=_this.currentDays.length; i<l; i++) {
 
@@ -125,12 +192,16 @@ export class AppComponent implements OnInit {
             let currentDay = _this.currentDays[i];
             let currentChamberId : number = currentChamberIds[j];
 
+            //console.log("So, what is currentDAy?", currentDay);
+
             this.currentTimePoints.push({
               type: currentEnv
               , timePoint: timePoint.time
               , day: currentDay
               , chamberId: currentChamberId
               , value: timePoint.value
+              , x: timePoint.x
+              , y: timePoint.y
             })
 
 
@@ -140,6 +211,8 @@ export class AppComponent implements OnInit {
 
       }
       , this);
+
+      console.log(this.currentTimePoints.length)
 
       // Finally, we should order all timePoints by day and time:
 
@@ -200,6 +273,9 @@ export class AppComponent implements OnInit {
       });
 
       // Now, push the ordered time point data to the data service:
+
+      console.log("what are we pushing to the service?", this.currentTimePoints[0])
+
       this.dataService.setSchedule(this.currentTimePoints);
 
 
@@ -208,7 +284,6 @@ export class AppComponent implements OnInit {
     }
 
     onClickMe() {
-      console.log("click", this);
       //this.valuesChange.emit(this.values);
       //this.textBox.nativeElement.value = '';
     };

@@ -36,7 +36,6 @@ export class ChamberVariablesMenuComponent  {
 
     this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
         this.currentState = env;
-        console.log("menu receiving", env);
     })
 
 
@@ -50,7 +49,6 @@ export class ChamberVariablesMenuComponent  {
     this.dataService.setCurrentEnvironmentalParameter(this.defaultState);
 
     this.currentState = this.dataService.getCurrentEnvironmentalParameter();
-    //console.log(this.currentState)
 
   }
 

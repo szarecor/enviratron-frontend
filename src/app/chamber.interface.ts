@@ -16,5 +16,6 @@ export interface EnvironmentalVariableTimePoint {
   day: number;
   value: number;
   chamberId: number;
-
+  x: number;
+  y: number;
 }

@@ -46,21 +46,18 @@ export class ChamberButtonsComponent implements OnInit {
 
       chambers.push({
         id: i
-        , isChecked: i < 4 ? true : false
+        , isChecked: i === 1 ? true : false
       })
 
     }
     this.dataService.setChambers(chambers);
     this.chambers = chambers;
 
-    console.log(this.chambers)
 
     /*
     this.dataService.getChambers().subscribe(function(chambers : Chamber[]) {
       this.chambers = chambers;
 
-      console.log("listening for chambers")
-      console.log(this.chambers.filter(function(c) { return c.isChecked === true; }));
     });
     */
 
@@ -127,11 +124,7 @@ export class ChamberButtonsComponent implements OnInit {
 
 
 
-      console.log('chamberButtonClick() called');
-      console.log(v);
-      console.log(this.chambers);
       this.dataService.setChambers(this.chambers);
-      console.log(this.chambers.filter(function(c) { console.log(c.isChecked); c.isChecked == true }))
 
 
 

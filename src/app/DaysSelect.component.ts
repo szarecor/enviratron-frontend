@@ -35,9 +35,11 @@ export class DaysSelectComponent  {
   constructor(private ds: ChamberDataService) {
     this.dataService = ds; //ChamberDataService;
 
+    let _this = this;
+
     this.dataService.getSelectedDays().subscribe(function(days: any[]) {
-      console.log('days selector comp received', days);
-      this.selectedDays = days;
+
+      _this.selectedDays = days;
 
     });
 
@@ -71,6 +73,8 @@ export class DaysSelectComponent  {
                 return i+1;
             }
         );
+        // TODO: this shouldn't be hard-coded here:
+        this.dataService.setSelectedDays([1])
 
     }
 

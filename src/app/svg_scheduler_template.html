@@ -7,15 +7,18 @@
       background-color: GhostWhite;
     }
 
-    .time-series-marker {
-      fill: #d0d0d0;
-
-    }
 
     .time-series-marker:hover {
-      cursor: pointer;
-      fill: orange;
+      cursor: pointer !important;
+      fill: maroon !important;
+
     }
+
+    .time-series-marker {
+      fill: #d0d0d0;
+      pointer-events: all;
+    }
+
 
     .grid line {
       stroke: lightgrey;
@@ -41,7 +44,7 @@
   <a (click)="clearUi()">clear</a>
 
   <div>
-    Current: <span id="mouseCurrentTemp"></span>&deg; C at <span id="mouseCurrentTime"></span>
+    Current: <span id="mouseCurrentTemp">[[ currentValue ]]</span> &deg; C at <span id="mouseCurrentTime">[[ currentTime ]]</span>
   </div>
 
   <!--
@@ -52,6 +55,7 @@
   </ol>
   -->
 
+  <!--
   In SVG Comp<br />
   What is days? [[ days ]]<br />
   What is the environment? [[ environment ]]
@@ -62,8 +66,5 @@
 
   <ol>
     <li *ngFor="let point of timePoints">[[ point.temp ]] - [[ point.time ]]</li>
-
-
-
   </ol>
-
+-->
