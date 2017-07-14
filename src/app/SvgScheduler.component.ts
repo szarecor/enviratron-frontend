@@ -5,6 +5,7 @@ import {Component, Input, Output, EventEmitter} from '@angular/core';
 import {ChamberDataService} from './data.service';
 import {EnvironmentalVariableTimePoint} from './chamber.interface';
 import {BehaviorSubject} from "rxjs/BehaviorSubject";
+import {first} from "rxjs/operator/first";
 
 
 declare var d3: any;
@@ -82,8 +83,7 @@ export class SvgSchedulerComponent {
   @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
 
 
-  growthChambers: any[] = [];
-  growthChambers2: any[] = [];
+  growthChamberIds: any[] = [];
   environment: string; //BehaviorSubject<string> = new BehaviorSubject("");
 
   line: any = d3.line()
@@ -130,38 +130,7 @@ export class SvgSchedulerComponent {
 
 
     this.dataService.getSelectedChambers().subscribe(function (chambers) {
-
-      //alert("what do we do here to combine data across chambers?")
-
-      console.log(chambers);
-
-      _this.growthChambers = chambers
-
-
-      /*
-      window.setTimeout(function() {
-
-        _this.growthChambers = chambers.map(c => c).filter(c => c.isChecked);
-        console.log("timeout complete"
-
-      )}, 100);
-	    */
-
-
-
-      /*
-      _this.growthChambers = chambers.filter(function (chamber) {
-        console.log(chamber.isChecked);
-        // TODO: why is the chamber state always one-click behind?
-        //console.log(chamber, chamber.isChecked);
-        return chamber.isChecked != true;
-      });
-*/
-      console.log(_this.growthChambers);
-      console.log("####################")
-
-
-
+      _this.growthChamberIds = chambers
       _this.loadData()
 
     });
@@ -391,14 +360,11 @@ export class SvgSchedulerComponent {
 
     let _this = this;
 
-    let chamberIds = _this.growthChambers.filter(chamber => chamber.isChecked == true ).map(function(chamber) { return chamber.id; })
-
-    console.log("AND WHAT IS CHAMBERIDS?", chamberIds)
         //, days = this.days;
 
     let dataPoints = this.schedule.filter(function(dp) {
 
-      if (chamberIds.indexOf(dp.chamberId) === -1) {
+      if (_this.growthChamberIds.indexOf(dp.chamberId) === -1) {
         return false;
       }
 
@@ -434,21 +400,52 @@ export class SvgSchedulerComponent {
         return dp.day == filteredDays[0];
       }, this);
 
+    }
+    // Done filtering down to the data only for the first day
+
+
+    // Now we need to do the same thing for chambers where there are multiple chambers selected that have separate time points:
+    if (_this.growthChamberIds.length > 1) {
+
+      console.log("WE ARE DEFAULTING TO THE LOWEST GC ID!!!")
+
+      // growthChamberIds is already sorted for us:
+      // Simply defaulting to the lowest growth chamber ID doesn't work b/c that chamber might not have data...
+      let firstChamberId = _this.growthChamberIds[0];
+      let filteredDataPoints = []
+
+
+      for (var i=0,l=_this.growthChamberIds.length; i<l; i++) {
+
+        filteredDataPoints = dataPoints.filter(function(dp) {
+          return dp.chamberId === _this.growthChamberIds[i];
+        })
+
+        if (filteredDataPoints.length > 0) {
+          dataPoints = filteredDataPoints;
+          console.log("BREAKING ON GC", _this.growthChamberIds[i]);
+          break;
+        }
+      }
 
 
 
     }
 
+    console.log("AFTER FILTERING BY CHAMBER:", dataPoints)
+
 
     //console.log("filtered data is")
     //console.log(dataPoints)
 
+    this.timePoints = dataPoints;
 
     if (dataPoints.length > 0) {
 
-
-      this.timePoints = dataPoints;
       this.updateRendered()
+    } else {
+      this.clearUi()
+
     }
 
   }

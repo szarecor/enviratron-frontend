@@ -119,12 +119,22 @@ export class ChamberButtonsComponent implements OnInit {
 
 
     chamberButtonClick(v:any) {
-      // TODO: there's too much manual coding of this.chambers here, fix that
+
+      let _this = this;
+
+      // TODO: figure out why not wrapping the setChambers() call in a setTimeout is causing problems
+      // without it, the Svg Component seems to be one click behind in state at all times.
+      window.setTimeout(
+        function() {
+
+          console.log("What are we pushing to the data service?", _this.chambers);
+          _this.dataService.setChambers(_this.chambers);
+        }
+
+        , 100
+      )
 
 
-
-
-      this.dataService.setChambers(this.chambers);
 
 
 
