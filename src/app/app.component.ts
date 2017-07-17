@@ -59,11 +59,6 @@ export class AppComponent implements OnInit {
 
     ngOnInit(): void {
 
-
-
-
-
-
         let _this = this;
 
         this.dataService.setSelectedDays(this.currentDays)
@@ -73,7 +68,6 @@ export class AppComponent implements OnInit {
 
 
         this.dataService.getDays().subscribe(function(days) {
-          console.log("main comp receiving days", days)
 
           _this.currentDays = days;
 
@@ -87,13 +81,13 @@ export class AppComponent implements OnInit {
   }
 
 
-
-
     handleTimePointsChange(newState: any[]) {
       // This gets called via an @Output param event emitter on the <svg-scheduler> component:
       // We need to pull values out of our Observables:
 
-      console.log("receiving newState via emiitter", newState)
+
+      console.log("newState received!")
+      console.log(newState)
 
       let currentEnv: string = this.currentEnvironment
         , currentChambers: Chamber[] = this.growthChambers.filter(function(chamber) {
@@ -110,32 +104,15 @@ export class AppComponent implements OnInit {
         return;
       }
 
-      //console.log("what is new state?")
-      //console.log(newState)
-      //console.log("what is current state?")
-      //console.log(this.currentTimePoints)
 
 
-
+	    /*
       let newStateDays = newState.map(function(dp) {
 
         return dp.day;
 
       }).filter((v, i, a) => a.indexOf(v) === i);
-
-
-      //console.log("what is newStateDays?", newStateDays);
-
-
-      console.log("--------------")
-      console.log(this.currentEnvironment)
-      console.log(currentChamberIds)
-      console.log(this.currentDays)
-      console.log(this.schedule)
-      console.log("what is currentTimePoints?", this.currentTimePoints)
-      console.log("--------------")
-
-
+      */
 
 
       // We need to filter out anything from currentTimePoints that is covered by the current chamber, day, variable state:
@@ -146,43 +123,23 @@ export class AppComponent implements OnInit {
 
           return false;
         }
-        /*
-        if (this.currentDays.indexOf(tp.day) > -1) {
-
-          return false;
-        }
-
-        if (tp.type == this.currentEnvironment) {
-
-          return false;
-        }
-	      */
 
          return true;
 
       }, this);
 
 
-      console.log("what is filtered list?", this.currentTimePoints.length)
 
 
 
       let _this = this;
 
       newState.forEach(function(timePoint) {
-
+        console.log(timePoint)
 
         var currentDay: number, currentChamber: number;
 
-
-
-
-
         // We want to insert a timePoint for each chamber and day when chambers or days are being edited in bulk:
-        //console.log("WHAT IS TIMEPOINT?")
-        //console.log(timePoint)
-
-
 
 
         for (let i=0, l=_this.currentDays.length; i<l; i++) {
@@ -194,11 +151,10 @@ export class AppComponent implements OnInit {
             let currentDay = _this.currentDays[i];
             let currentChamberId : number = currentChamberIds[j];
 
-            //console.log("So, what is currentDAy?", currentDay);
 
             this.currentTimePoints.push({
               type: currentEnv
-              , timePoint: timePoint.time
+              , timePoint: timePoint.time || timePoint.timePoint
               , day: currentDay
               , chamberId: currentChamberId
               , value: timePoint.value
@@ -214,7 +170,6 @@ export class AppComponent implements OnInit {
       }
       , this);
 
-      console.log(this.currentTimePoints.length)
 
       // Finally, we should order all timePoints by day and time:
 
@@ -276,12 +231,7 @@ export class AppComponent implements OnInit {
 
       // Now, push the ordered time point data to the data service:
 
-      //console.log("what are we pushing to the service?", this.currentTimePoints[0])
-
       this.dataService.setSchedule(this.currentTimePoints);
-
-
-
 
     }
 

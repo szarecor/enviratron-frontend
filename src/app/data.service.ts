@@ -33,7 +33,7 @@ export class ChamberDataService {
     setSchedule(schedule: any[]) {
 
 
-      //console.log("dataservice received", schedule)
+      console.log("dataservice received", schedule)
       this.schedule.next(schedule);
     }
 
@@ -72,6 +72,7 @@ export class ChamberDataService {
 
     /* TIME POINTS */
     setTimePoints(timePoints: any[]) {
+      console.log("setTimePoints recevied", timePoints)
       this.timePoints.next(timePoints);
     }
 

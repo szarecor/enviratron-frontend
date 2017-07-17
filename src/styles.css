@@ -1,1 +1,33 @@
 /* You can add global styles to this file, and also import other style files */
+
+
+/* For whatever reason, these style declarations were not working in svg_scheduler_template.html, so I moved them here */
+
+svg {
+
+  border: 1px solid #d0d0d0;
+  background-color: GhostWhite;
+}
+
+
+.time-series-marker:hover {
+  cursor: pointer !important;
+  fill: maroon !important;
+}
+
+svg circle.time-series-marker {
+  fill: #d0d0d0;
+  pointer-events: all;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+
+.tick line {
+  stroke: lightgrey;
+}
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}

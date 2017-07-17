@@ -1,21 +1,13 @@
-
-
-
-<div *ngFor="let cc of chambers">[[cc.id]] [[cc.isChecked]]</div>
-
-
 <div>
 
 <label [ngClass]="{'active': false }">
-    <input (keyup)="allChambersButtonClick($event)" type="checkbox" name="chambers" value="" />
+    <input (click)="allChambersButtonClick($event)" type="checkbox" name="chambers" value="" />
     <br />
     All
 </label>
 
-<label [ngClass]="{'active': false}" *ngFor="let chamber of chambers ; index as i">
+<label [ngClass]="{'active': chamber.isChecked}" *ngFor="let chamber of chambers ; index as i">
     <input (click)="chamberButtonClick($event)" type="checkbox" name="chambers" [(ngModel)]="chambers[i].isChecked" />
-    [[ chamber.isChecked ]]
-
     Chamber [[chamber.id]]
 </label>
 
@@ -40,7 +32,7 @@
     }
 
     input {
-        visibility: visible;
+        visibility: hidden;
     }
 
     label.active {

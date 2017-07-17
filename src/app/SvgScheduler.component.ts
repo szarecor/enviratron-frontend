@@ -107,23 +107,19 @@ export class SvgSchedulerComponent {
 
     let _this = this;
 
-    //console.log(this.timePoints)
-
-    //console.log("ngOnInit() called")
-
     this.dataService.getCurrentEnvironmentalParameter().subscribe(function (env) {
 
       // TODO: what's the best way to NOT run clearUi onInit?
       let currentEnvironment = _this.environment
 
-      //console.log("receiving new env", env)
       _this.environment = env;
 
+
+      _this.initSvg(env)
 
       if (currentEnvironment) {
         _this.clearUi();
       }
-
       _this.loadData()
 
     })
@@ -137,6 +133,8 @@ export class SvgSchedulerComponent {
 
 
     this.dataService.getSchedule().subscribe(function (schedule: any[]) {
+
+      console.log("subscribed to", schedule)
       _this.schedule = schedule;
 
 
@@ -147,8 +145,6 @@ export class SvgSchedulerComponent {
 
     this.dataService.getDays().subscribe(function (days) {
 
-      console.log("Svg component received new days", days)
-      console.log(_this.schedule);
 
       let previousDaysSelection = _this.days;
       _this.days = days;
@@ -168,7 +164,6 @@ export class SvgSchedulerComponent {
       })
 
 
-      //console.log(_this.timePoints);
 
       _this.clearUi();
       _this.loadData();
@@ -178,7 +173,7 @@ export class SvgSchedulerComponent {
     })
 
     //_this.loadData()
-    _this.initSvg();
+    _this.initSvg(_this.environment);
 
   } // end ngOnInit()
 
@@ -220,6 +215,8 @@ export class SvgSchedulerComponent {
       return !(p.x === thisPoint.x && p.y === thisPoint.y);
     });
 
+    this.addTerminalTimePoints();
+
     d3.event.stopPropagation();
     this.updateRendered();
     this.timePointsChangeHandler();
@@ -246,48 +243,7 @@ export class SvgSchedulerComponent {
     });
 
 
-    // Now make sure that the entire 24 hours are covered:
-    // Create a point for 12:01 AM:
-    if (this.timePoints[0].x > 0) {
 
-      var tmpDate = new Date(0)
-      tmpDate.setHours(0);
-      tmpDate.setMinutes(0);
-
-      this.timePoints.splice(
-        0,
-        0,
-        {
-          x: 0
-          , y: this.timePoints[0].y
-          , value: this.timePoints[0].value
-          , type: this.environment
-          //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-          , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
-        }
-      )
-    }
-
-    // And create a point to cover to the right end (midnight):
-    //if (this.timePoints[this.timePoints.length - 1].time !== '12:00 AM') {
-    if (this.timePoints[this.timePoints.length - 1].time !== 1439) {
-
-      var lastTimePoint = this.timePoints[this.timePoints.length - 1]
-
-      var tmpDate = new Date(0)
-      tmpDate.setHours(23);
-      tmpDate.setMinutes(59);
-
-      this.timePoints.push({
-        x: this.width
-        , y: lastTimePoint.y
-        , value: lastTimePoint.value
-        , type: this.environment
-        //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-        , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
-
-      });
-    }
 
 
     this.svg.append("path")
@@ -322,8 +278,8 @@ export class SvgSchedulerComponent {
       return d.y;
     })
     .attr("r", 5)
-    .style("stroke", "steelblue")
-    .style("stroke-width", 2)
+    //.style("stroke", "steelblue")
+    //.style("stroke-width", 2)
     .attr("data-celcius", function (d: any) {
       return d.temp;
     })
@@ -350,12 +306,11 @@ export class SvgSchedulerComponent {
 
 
     //console.log("---------------")
-    //console.log("loadData called")
+    console.log("loadData called")
     //console.log(this.timePoints)
     //console.log(this.environment)
     //console.log(this.chambers)
     //console.log(this.days)
-
     //console.log("---------------")
 
     let _this = this;
@@ -381,6 +336,9 @@ export class SvgSchedulerComponent {
       return true;
     }, this)
 
+
+
+
     // At this point we have a problem if two or more days are selected that contain separate time points...
     if (this.days.length > 1) {
       // Let's determine what the first day in the data is:
@@ -393,7 +351,6 @@ export class SvgSchedulerComponent {
       });
 
 
-      //console.log("what is filteredDays?", filteredDays);
 
       // Now use the first day to pull out the data:
       dataPoints = dataPoints.filter(function(dp) {
@@ -432,11 +389,68 @@ export class SvgSchedulerComponent {
 
     }
 
-    console.log("AFTER FILTERING BY CHAMBER:", dataPoints)
+    // If we have no data for the day(s) at hand, we want to look at previous days and extend
+    // the last value we have through the day(s) at hand
+    if (dataPoints.length === 0 && this.schedule.length > 0) {
+      let day = this.days[0];
+      console.log(day)
 
 
-    //console.log("filtered data is")
-    //console.log(dataPoints)
+
+      while (day > 1) {
+
+        day--;
+
+        console.log(this.environment)
+
+        // Let's see if we have any data:
+        let previousDaysData = this.schedule.filter(function(timePoint) {
+
+          // Exclude any data related to a different environmental variable:
+          if (timePoint.type !== _this.environment) { return false; }
+
+          // Exclude anything for a different chamber,
+          // because we generate a separate timePoint for each chamber when adding points and multiple chambers are
+          // selected, it's pretty straighforward to compare the this.growthChamberIds array to the single chamberId
+          // of each timePoint in the schedule
+          if (this.growthChamberIds.indexOf(timePoint.chamberId) === -1) {
+            return false;
+          }
+
+          // is this for the day @ hand?
+          return timePoint.day === day;
+
+        }, this)
+
+        if (previousDaysData.length !== 0) {
+
+          let previousDataPoint = previousDaysData[previousDaysData.length-1]
+          console.log(previousDataPoint)
+
+          let startPoint = JSON.parse(JSON.stringify(previousDataPoint))
+          let endPoint = JSON.parse(JSON.stringify(previousDataPoint))
+
+          startPoint.day = this.days[0]
+          startPoint.timePoint = 0;
+          startPoint.x = 0;
+
+          endPoint.day = this.days[0]
+          dataPoints = [startPoint, endPoint]
+          break;
+
+
+
+
+        }
+
+
+
+      }
+
+
+    }
+
+
 
     this.timePoints = dataPoints;
 
@@ -455,12 +469,40 @@ export class SvgSchedulerComponent {
 
 
 
-    initSvg() {
-    // this function handles the initial rendering and bootstrapping of the the D3 SVG
+    initSvg(envParam : string) {
+	    // this function handles the initial rendering and bootstrapping of the the D3 SVG
+
+      let yDomain;
+
+      console.log(envParam)
+
+      // What is our current scale for the y-axis?
+      switch(envParam) {
+
+        case 'Lighting':
+          yDomain = [0, 10];
+          break;
+        case 'Temperature':
+          yDomain = [0, 40];
+          break;
+
+        default:
+		      yDomain = [0, 100];
+      }
+
+
+
+      console.log(yDomain)
+
+
+    d3.selectAll("svg > *").remove();
 
     // Begin the SVG:
     let _this = this;
       this.svg = d3.select("svg");
+
+
+
 
       this.margin = {top: 20, right: 20, bottom: 40, left: 20};
 
@@ -482,17 +524,18 @@ export class SvgSchedulerComponent {
     };
 
     var startDate = new Date();
-    startDate.setHours(0, 0, 0);
+    startDate.setHours(-1, 0, 0);
     var endDate = new Date();
-    endDate.setHours(23, 59, 0);
+    //endDate.setHours(23, 59, 0);
+    endDate.setHours(25, 0, 0);
 
-    _this.xScale = d3.scaleTime()
+      _this.xScale = d3.scaleTime()
     .domain([startDate, endDate])
     .range([0, this.width]);
 
     //xScale.ticks(d3.timeMinute.every(10));
       _this.yScale = d3.scaleLinear()
-    .domain([0, 40])
+    .domain(yDomain)
     .range([this.height, 0]);
 
     g.append("g")
@@ -521,7 +564,7 @@ export class SvgSchedulerComponent {
     )
     .attr("class", "grid")
     .append("text")
-    .attr("fill", "#000")
+    //.attr("fill", "#000")
     .attr("transform", "rotate(-90)")
     .attr("y", 6)
     .attr("dy", "0.71em")
@@ -547,8 +590,6 @@ export class SvgSchedulerComponent {
       });
 
 
-
-    //console.log(_this.timePoints);
 
     if (this.timePoints.length > 0) {
       this.updateRendered();
@@ -596,11 +637,7 @@ export class SvgSchedulerComponent {
 
     let _this = this;
 
-    console.log("svg click recorded?")
-    console.log(elRef)
-
     var coords = d3.mouse(elRef);
-    console.log(coords)
 
     // Make sure we don't draw any points outside of the graph area:
     if (coords[0] <= _this.margin.left || coords[0] >= _this.margin.left + _this.width) {
@@ -611,20 +648,32 @@ export class SvgSchedulerComponent {
       return;
     }
 
+
+
+
     // Normally we go from data to pixels, but here we're doing pixels to data
     var newPoint             = {
       x: Math.round(_this.xScale.invert(coords[0] - _this.margin.left)),
       y: Math.round(_this.yScale.invert(coords[1] - _this.margin.top))
     }
-      , timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+      //, timeString = new Date(newPoint.x).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
 
       , tmpDate = new Date(newPoint.x)
       , grossMinutes: number = (tmpDate.getHours() * 60) + tmpDate.getMinutes();
 
 
+    let tday = new Date();
+
+    if (tday.getDay() !== tmpDate.getDay()) {
+      return;
+    }
+
     // We need to remove the first and last synthetic points before adding our new point:
     _this.timePoints.pop()
     _this.timePoints.splice(0, 1);
+
+
+    console.log("onclick, what is newPoint?", newPoint, "and gross minutes?", grossMinutes)
 
     _this.timePoints.push({
       x: coords[0]
@@ -633,6 +682,7 @@ export class SvgSchedulerComponent {
       , time: grossMinutes //timeString
 
     })
+
 
     // Sort the timepoints on x-axis position:
     _this.timePoints.sort(function (a, b) {
@@ -645,12 +695,116 @@ export class SvgSchedulerComponent {
     });
 
 
-    console.log("Before calling updateRendered")
-    console.log(_this.timePoints[_this.timePoints.length-2])
+
+
+    _this.addTerminalTimePoints()
 
 
     _this.updateRendered();
     _this.timePointsChangeHandler();
+  } // svgOnClick()
+
+
+  addTerminalTimePoints() {
+
+    // Now make sure that the entire 24 hours are covered:
+    // Create a point for 12:01 AM:
+    if (this.timePoints[0].x > 0) {
+
+      console.log("what's the first timePoint?", this.days[0])
+      let previousDay = this.days[0] - 1;
+
+      if (previousDay >= 1) {
+
+        // see what we have for the previous day:
+        var previousDaysData = this.schedule.filter(function (timePoint) {
+
+            console.log(timePoint, previousDay, this)
+
+
+            if (timePoint.day !== previousDay) {
+              console.log("returning false b/c", timePoint.day, "!=", previousDay);
+              return false;
+            }
+
+            if (this.growthChamberIds.indexOf(timePoint.chamberId) === -1) {
+              console.log("returning false b/c", timePoint.chamberId, "is not in", this.growthChamberIds)
+              return false;
+            }
+
+            if (timePoint.type !== this.environment) {
+              console.log("return false b/c", timePoint.type, "not equal to", this.environment);
+              return false;
+            }
+
+            return true;
+
+
+          }
+          , this)
+      } else {
+        var previousDaysData = [];
+
+      }
+
+      console.log("what is previousDaysData?", previousDaysData)
+
+      if (previousDaysData.length !== 0) {
+        var newY = previousDaysData[previousDaysData.length-1].y;
+        var newVal = previousDaysData[previousDaysData.length-1].value;
+
+        console.log("")
+        console.log("GOING TO USE TERMINAL FROM PREVIOUS DAY!")
+        console.log("")
+
+      } else {
+        var newVal = this.timePoints[0].value;
+        var newY = this.timePoints[0].y;
+
+      }
+
+
+
+      var tmpDate = new Date(0)
+      tmpDate.setHours(0);
+      tmpDate.setMinutes(0);
+
+      this.timePoints.splice(
+        0,
+        0,
+        {
+          x: 49 //_this.margin.x
+          , y: newY //this.timePoints[0].y
+          , value: newVal //this.timePoints[0].value
+          , type: this.environment
+          //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          , time: 1 //(tmpDate.getHours() * 60) + tmpDate.getMinutes()
+        }
+      )
+    }
+
+    // And create a point to cover to the right end (midnight):
+    //if (this.timePoints[this.timePoints.length - 1].time !== '12:00 AM') {
+    if (this.timePoints[this.timePoints.length - 1].time !== 1439) {
+
+      var lastTimePoint = this.timePoints[this.timePoints.length - 1]
+
+      var tmpDate = new Date(0)
+      tmpDate.setHours(23);
+      tmpDate.setMinutes(59);
+
+      this.timePoints.push({
+        x: this.width
+        , y: lastTimePoint.y
+        , value: lastTimePoint.value
+        , type: this.environment
+        //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        , time: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
+
+      });
+    }
+
+
   }
 
 
