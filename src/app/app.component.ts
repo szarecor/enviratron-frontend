@@ -80,6 +80,10 @@ export class AppComponent implements OnInit {
 
   }
 
+  handleNewTimePoint(newPoint: any) {
+      console.log("NEW POINT!!!!")
+      console.log(newPoint);
+  }
 
     handleTimePointsChange(newState: any[]) {
       // This gets called via an @Output param event emitter on the <svg-scheduler> component:

@@ -6,7 +6,7 @@ import {ChamberDataService} from './data.service';
 import {EnvironmentalVariableTimePoint} from './chamber.interface';
 import {BehaviorSubject} from "rxjs/BehaviorSubject";
 import {first} from "rxjs/operator/first";
-
+import {HttpModule} from "@angular/http";
 
 declare var d3: any;
 
@@ -81,6 +81,7 @@ export class SvgSchedulerComponent {
   // Emit an event for the parent to handle when there is a change on the days <select> list:
   //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
   @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
+  @Output() onNewTimePoint: EventEmitter<any> = new EventEmitter<any>();
 
 
   growthChamberIds: any[] = [];
@@ -675,13 +676,19 @@ export class SvgSchedulerComponent {
 
     console.log("onclick, what is newPoint?", newPoint, "and gross minutes?", grossMinutes)
 
-    _this.timePoints.push({
+    let newDataPoint = {
       x: coords[0]
       , y: coords[1]
       , value: newPoint.y
       , time: grossMinutes //timeString
 
-    })
+    };
+
+    _this.timePoints.push(newDataPoint)
+
+    console.log("EMMITING", newDataPoint);
+    _this.onNewTimePoint.emit(newDataPoint);
+
 
 
     // Sort the timepoints on x-axis position:
@@ -702,6 +709,9 @@ export class SvgSchedulerComponent {
 
     _this.updateRendered();
     _this.timePointsChangeHandler();
+
+
+
   } // svgOnClick()
 
 
