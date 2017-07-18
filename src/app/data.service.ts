@@ -43,6 +43,71 @@ export class ChamberDataService {
       return this.schedule.asObservable();
     }
 
+    addScheduleTimePoint(timePoint: any) {
+
+
+      let sched = this.schedule.value;
+
+      timePoint['environment'] = this.currentEnvironmentalParameter.value
+
+      let tmpCopy;
+      console.log(this.days)
+
+      let chambers = this.chambers.value.filter(function(chamber) {
+        return chamber.isChecked === true;
+
+      });
+      let selectedDays = this.selectedDays.value;
+
+
+      for (let i=0,l=selectedDays.length; i<l; i++) {
+
+        let day = selectedDays[i];
+        tmpCopy = JSON.parse(JSON.stringify(timePoint))
+        tmpCopy.day = i;
+
+        for (let j=0,l2=chambers.length; j<l2; j++) {
+          tmpCopy.chamberId = chambers[j].id
+          sched.push(tmpCopy);
+        }
+
+      }
+
+      sched.sort(function(a, b) {
+
+        if (a.chamberId < b.chamberId) {
+          return -1;
+        } else if (a.chamberId > b.chamberId) {
+          return 1;
+        } else {
+
+          if (a.day < b.day) {
+
+            return -1;
+
+          } else if (a.day > b.day) {
+
+            return 1;
+
+          } else {
+            // days are equal:
+
+            if (a.timePoint === b.timePoint) {
+              return 0;
+            } else {
+
+              return a.timePoint < b.timePoint ? -1 : 1;
+            }
+
+          }
+        }
+      });
+
+
+        this.schedule.next(sched);
+        console.log(this.schedule.value)
+
+    }
 
     /* CHAMBERS: */
     getChambers(): Observable<Chamber[]> {

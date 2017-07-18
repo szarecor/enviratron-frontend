@@ -80,7 +80,7 @@ export class SvgSchedulerComponent {
 
   // Emit an event for the parent to handle when there is a change on the days <select> list:
   //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
-  @Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
+  //@Output() onTimePointsChange: EventEmitter<any> = new EventEmitter<any>();
   @Output() onNewTimePoint: EventEmitter<any> = new EventEmitter<any>();
 
 
@@ -181,7 +181,7 @@ export class SvgSchedulerComponent {
 
   timePointsChangeHandler() {
 
-    this.onTimePointsChange.emit(this.timePoints);
+    //this.onTimePointsChange.emit(this.timePoints);
   }
 
 
@@ -686,9 +686,9 @@ export class SvgSchedulerComponent {
 
     _this.timePoints.push(newDataPoint)
 
-    console.log("EMMITING", newDataPoint);
-    _this.onNewTimePoint.emit(newDataPoint);
-
+    //console.log("EMMITING", newDataPoint);
+    //this.onNewTimePoint.emit(newDataPoint);
+    this.dataService.addScheduleTimePoint(newDataPoint);
 
 
     // Sort the timepoints on x-axis position:
@@ -704,7 +704,7 @@ export class SvgSchedulerComponent {
 
 
 
-    _this.addTerminalTimePoints()
+    //_this.addTerminalTimePoints()
 
 
     _this.updateRendered();
