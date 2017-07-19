@@ -74,6 +74,9 @@ export class AppComponent implements OnInit {
         })
 
         this.dataService.getSchedule().subscribe(function(schedule) {
+
+          console.log("main component receiving new schedule:", schedule)
+
           _this.schedule = schedule
 
         })

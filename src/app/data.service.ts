@@ -43,6 +43,75 @@ export class ChamberDataService {
       return this.schedule.asObservable();
     }
 
+
+    removeScheduleTimePoint(timePointToDelete: any) {
+      console.log("Let's delete this:", timePointToDelete);
+      let sched = this.schedule.value;
+
+      //timePoint['environment'] = this.currentEnvironmentalParameter.value
+
+      let tmpCopy;
+
+      let selectedChamberIds = this.chambers.value.filter(function(chamber) {
+        return chamber.isChecked === true;
+      }).map(function(chamber) { return chamber.id; });
+
+      let selectedDays = this.selectedDays.value;
+
+      console.log(sched)
+	    console.log(selectedChamberIds, selectedDays)
+
+      sched = sched.filter(function(timePoint) {
+
+        if (timePoint.environment !== this.currentEnvironmentalParameter.value) {
+          return true;
+        }
+
+        if (selectedChamberIds.indexOf(timePoint.chamberId) === -1) {
+          return true;
+        }
+
+        if (selectedDays.indexOf(timePoint.day) === -1) {
+          return true;
+        }
+
+        // At this point we've eliminated from consideration everything for other chambers, days and env variables
+        if (timePoint.minutes !== timePointToDelete.minutes) {
+          return true;
+        }
+
+        if (timePoint.value !== timePointToDelete.value) {
+
+          return true;
+        }
+
+        return false;
+
+
+      }, this);
+
+      this.schedule.next(sched);
+
+
+
+      /*
+      for (let i=0,l=selectedDays.length; i<l; i++) {
+
+        let day = selectedDays[i];
+        // TODO: Is there a better way to clone?
+        tmpCopy = JSON.parse(JSON.stringify(timePoint))
+        tmpCopy.day = day;
+
+        for (let j=0,l2=chambers.length; j<l2; j++) {
+          tmpCopy.chamberId = chambers[j].id
+          sched.push(tmpCopy);
+        }
+
+      }
+      */
+    }
+
+
     addScheduleTimePoint(timePoint: any) {
 
 
@@ -51,7 +120,6 @@ export class ChamberDataService {
       timePoint['environment'] = this.currentEnvironmentalParameter.value
 
       let tmpCopy;
-      console.log(this.days)
 
       let chambers = this.chambers.value.filter(function(chamber) {
         return chamber.isChecked === true;
@@ -63,8 +131,9 @@ export class ChamberDataService {
       for (let i=0,l=selectedDays.length; i<l; i++) {
 
         let day = selectedDays[i];
+        // TODO: Is there a better way to clone?
         tmpCopy = JSON.parse(JSON.stringify(timePoint))
-        tmpCopy.day = i;
+        tmpCopy.day = day;
 
         for (let j=0,l2=chambers.length; j<l2; j++) {
           tmpCopy.chamberId = chambers[j].id
@@ -103,9 +172,7 @@ export class ChamberDataService {
         }
       });
 
-
         this.schedule.next(sched);
-        console.log(this.schedule.value)
 
     }
 
@@ -116,14 +183,7 @@ export class ChamberDataService {
 
 
     getSelectedChambers() {
-      console.log("getSelectedChambers called")
-
-      //this.selectedChambers.next(this.chambers.value.filter((c) => c.isChecked));
-
-      return this.selectedChamberIds.asObservable(); //.value.filter(chamber => chamber.isChecked).asObservable();
-
-
-
+      return this.selectedChamberIds.asObservable();
     }
 
     setChambers(chambers: Chamber[]) {

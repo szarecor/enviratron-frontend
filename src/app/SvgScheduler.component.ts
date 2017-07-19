@@ -135,11 +135,11 @@ export class SvgSchedulerComponent {
 
     this.dataService.getSchedule().subscribe(function (schedule: any[]) {
 
-      console.log("subscribed to", schedule)
       _this.schedule = schedule;
 
-
-      _this.loadData()
+      console.log("getSchedule subscription giving", schedule)
+      //_this.loadData()
+      //_this.updateRendered();
 
     })
 
@@ -207,21 +207,25 @@ export class SvgSchedulerComponent {
   timePointClick(thisPoint: any) {
 
     // We need to remove the first and last synthetic points before adding our new point:
-    this.timePoints.pop()
-    this.timePoints.splice(0, 1);
+    //this.timePoints.pop()
+    //this.timePoints.splice(0, 1);
 
 
+    this.dataService.removeScheduleTimePoint(thisPoint)
 
+
+/*
     this.timePoints = this.timePoints.filter(function (p) {
       return !(p.x === thisPoint.x && p.y === thisPoint.y);
     });
 
     this.addTerminalTimePoints();
 
-    d3.event.stopPropagation();
     this.updateRendered();
     this.timePointsChangeHandler();
+    */
 
+    d3.event.stopPropagation();
   }
 
 
@@ -232,6 +236,8 @@ export class SvgSchedulerComponent {
 
     // Sort the timepoints by time before rendering:
 
+    //this.timePoints = this.schedule;
+    //console.log("in updateRendered, what is schedule?", this.schedule);
 
 
     this.timePoints.sort(function (a, b) {
@@ -307,7 +313,7 @@ export class SvgSchedulerComponent {
 
 
     //console.log("---------------")
-    console.log("loadData called")
+    //console.log("loadData called")
     //console.log(this.timePoints)
     //console.log(this.environment)
     //console.log(this.chambers)
@@ -365,7 +371,6 @@ export class SvgSchedulerComponent {
     // Now we need to do the same thing for chambers where there are multiple chambers selected that have separate time points:
     if (_this.growthChamberIds.length > 1) {
 
-      console.log("WE ARE DEFAULTING TO THE LOWEST GC ID!!!")
 
       // growthChamberIds is already sorted for us:
       // Simply defaulting to the lowest growth chamber ID doesn't work b/c that chamber might not have data...
@@ -381,7 +386,6 @@ export class SvgSchedulerComponent {
 
         if (filteredDataPoints.length > 0) {
           dataPoints = filteredDataPoints;
-          console.log("BREAKING ON GC", _this.growthChamberIds[i]);
           break;
         }
       }
@@ -394,7 +398,6 @@ export class SvgSchedulerComponent {
     // the last value we have through the day(s) at hand
     if (dataPoints.length === 0 && this.schedule.length > 0) {
       let day = this.days[0];
-      console.log(day)
 
 
 
@@ -402,7 +405,6 @@ export class SvgSchedulerComponent {
 
         day--;
 
-        console.log(this.environment)
 
         // Let's see if we have any data:
         let previousDaysData = this.schedule.filter(function(timePoint) {
@@ -426,7 +428,6 @@ export class SvgSchedulerComponent {
         if (previousDaysData.length !== 0) {
 
           let previousDataPoint = previousDaysData[previousDaysData.length-1]
-          console.log(previousDataPoint)
 
           let startPoint = JSON.parse(JSON.stringify(previousDataPoint))
           let endPoint = JSON.parse(JSON.stringify(previousDataPoint))
@@ -475,8 +476,6 @@ export class SvgSchedulerComponent {
 
       let yDomain;
 
-      console.log(envParam)
-
       // What is our current scale for the y-axis?
       switch(envParam) {
 
@@ -490,10 +489,6 @@ export class SvgSchedulerComponent {
         default:
 		      yDomain = [0, 100];
       }
-
-
-
-      console.log(yDomain)
 
 
     d3.selectAll("svg > *").remove();
@@ -670,17 +665,17 @@ export class SvgSchedulerComponent {
     }
 
     // We need to remove the first and last synthetic points before adding our new point:
-    _this.timePoints.pop()
-    _this.timePoints.splice(0, 1);
+    //_this.timePoints.pop()
+    //_this.timePoints.splice(0, 1);
 
 
-    console.log("onclick, what is newPoint?", newPoint, "and gross minutes?", grossMinutes)
+    //console.log("onclick, what is newPoint?", newPoint, "and gross minutes?", grossMinutes)
 
     let newDataPoint = {
       x: coords[0]
       , y: coords[1]
       , value: newPoint.y
-      , time: grossMinutes //timeString
+      , minutes: grossMinutes //timeString
 
     };
 
@@ -705,7 +700,7 @@ export class SvgSchedulerComponent {
 
 
     //_this.addTerminalTimePoints()
-
+    console.log("Calling updateRendered() from the onclick handler", _this.schedule, _this.timePoints)
 
     _this.updateRendered();
     _this.timePointsChangeHandler();
@@ -721,7 +716,6 @@ export class SvgSchedulerComponent {
     // Create a point for 12:01 AM:
     if (this.timePoints[0].x > 0) {
 
-      console.log("what's the first timePoint?", this.days[0])
       let previousDay = this.days[0] - 1;
 
       if (previousDay >= 1) {
@@ -729,21 +723,17 @@ export class SvgSchedulerComponent {
         // see what we have for the previous day:
         var previousDaysData = this.schedule.filter(function (timePoint) {
 
-            console.log(timePoint, previousDay, this)
 
 
             if (timePoint.day !== previousDay) {
-              console.log("returning false b/c", timePoint.day, "!=", previousDay);
               return false;
             }
 
             if (this.growthChamberIds.indexOf(timePoint.chamberId) === -1) {
-              console.log("returning false b/c", timePoint.chamberId, "is not in", this.growthChamberIds)
               return false;
             }
 
             if (timePoint.type !== this.environment) {
-              console.log("return false b/c", timePoint.type, "not equal to", this.environment);
               return false;
             }
 
@@ -757,15 +747,11 @@ export class SvgSchedulerComponent {
 
       }
 
-      console.log("what is previousDaysData?", previousDaysData)
 
       if (previousDaysData.length !== 0) {
         var newY = previousDaysData[previousDaysData.length-1].y;
         var newVal = previousDaysData[previousDaysData.length-1].value;
 
-        console.log("")
-        console.log("GOING TO USE TERMINAL FROM PREVIOUS DAY!")
-        console.log("")
 
       } else {
         var newVal = this.timePoints[0].value;
