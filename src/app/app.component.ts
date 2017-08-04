@@ -3,7 +3,8 @@ import { Subscription } from 'rxjs/Subscription';
 import { ChamberDataService } from './data.service';
 import {Observable} from "rxjs/Observable";
 import { Chamber, EnvironmentalVariableTimePoint } from './chamber.interface';
-import {current} from "codelyzer/util/syntaxKind";
+import {CurrentSelectionStateValidator} from "./CurrentSelectionStateValidator.service";
+//import {current} from "codelyzer/util/syntaxKind";
 
 @Component({
   selector: 'my-app',
@@ -17,8 +18,11 @@ import {current} from "codelyzer/util/syntaxKind";
 
 export class AppComponent implements OnInit {
 
+    currentExperimentId: number = 2;
     currentTimePoints: EnvironmentalVariableTimePoint[] = [];
     dataService: any;
+    validatorService: any;
+    validationState: any;
     dayCount: number;
 
     // passed to the environment selection menu component via @Input param:
@@ -34,9 +38,11 @@ export class AppComponent implements OnInit {
 
 
 
-    constructor(private ChamberDataService: ChamberDataService) {
+    constructor(private ChamberDataService: ChamberDataService, ValidationService: CurrentSelectionStateValidator) {
 
       this.dataService = ChamberDataService;
+      this.validatorService = ValidationService;
+
 
       let _this = this;
 
@@ -55,11 +61,23 @@ export class AppComponent implements OnInit {
 
       })
 
+
+      this.validatorService.getState().subscribe(function(validationState) {
+        _this.validationState = validationState;
+
+        console.log("DEBUGGING")
+        console.log(_this)
+
+
+      });
+
     }
 
     ngOnInit(): void {
 
         let _this = this;
+
+        this.dataService.setExperimentId(this.currentExperimentId);
 
         this.dataService.setSelectedDays(this.currentDays)
 
@@ -74,8 +92,6 @@ export class AppComponent implements OnInit {
         })
 
         this.dataService.getSchedule().subscribe(function(schedule) {
-
-          console.log("main component receiving new schedule:", schedule)
 
           _this.schedule = schedule
 
@@ -93,8 +109,6 @@ export class AppComponent implements OnInit {
       // We need to pull values out of our Observables:
 
 
-      console.log("newState received!")
-      console.log(newState)
 
       let currentEnv: string = this.currentEnvironment
         , currentChambers: Chamber[] = this.growthChambers.filter(function(chamber) {
@@ -126,7 +140,7 @@ export class AppComponent implements OnInit {
       this.currentTimePoints = this.currentTimePoints.filter(function(tp) {
 
 
-        if (currentChamberIds.indexOf(tp.chamberId) > -1 && this.currentDays.indexOf(tp.day) > -1 && tp.type == this.currentEnvironment) {
+        if (currentChamberIds.indexOf(tp.chamberId) > -1 && this.currentDays.indexOf(tp.day) > -1 && tp.environment == this.currentEnvironment) {
 
           return false;
         }
@@ -142,7 +156,6 @@ export class AppComponent implements OnInit {
       let _this = this;
 
       newState.forEach(function(timePoint) {
-        console.log(timePoint)
 
         var currentDay: number, currentChamber: number;
 
@@ -160,13 +173,13 @@ export class AppComponent implements OnInit {
 
 
             this.currentTimePoints.push({
-              type: currentEnv
+              environment: currentEnv
               , timePoint: timePoint.time || timePoint.timePoint
               , day: currentDay
               , chamberId: currentChamberId
               , value: timePoint.value
-              , x: timePoint.x
-              , y: timePoint.y
+              , x_position: timePoint.x_position
+              , y_position: timePoint.y_position
             })
 
 

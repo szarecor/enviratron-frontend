@@ -952,20 +952,20 @@ module d3 {
   export var event: Event | BaseEvent;
 
   /**
-   * Returns the x and y coordinates of the mouse relative to the provided container element, using d3.event for the mouse's position on the page.
+   * Returns the x_position and y_position coordinates of the mouse relative to the provided container element, using d3.event for the mouse's position on the page.
    * @param container the container element (e.g. an SVG <g> element)
    */
   export function mouse(container: EventTarget): [number, number];
 
   /**
-   * Given a container element and a touch identifier, determine the x and y coordinates of the touch.
+   * Given a container element and a touch identifier, determine the x_position and y_position coordinates of the touch.
    * @param container the container element (e.g., an SVG <svg> element)
    * @param identifier the given touch identifier
    */
   export function touch(container: EventTarget, identifer: number): [number, number];
 
   /**
-   * Given a container element, a list of touches, and a touch identifier, determine the x and y coordinates of the touch.
+   * Given a container element, a list of touches, and a touch identifier, determine the x_position and y_position coordinates of the touch.
    * @param container the container element (e.g., an SVG <svg> element)
    * @param identifier the given touch identifier
    */

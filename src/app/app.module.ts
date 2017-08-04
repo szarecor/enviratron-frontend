@@ -8,13 +8,16 @@ import  { ChamberVariablesMenuComponent } from './ChamberVariablesMenu.component
 import { SvgSchedulerComponent } from './SvgScheduler.component';
 import { SubmitButtonComponent } from './SubmitButton.component';
 import {ChamberDataService} from "./data.service";
-import {HttpModule} from '@angular/http';
+//import {HttpModule} from '@angular/http';
+import {HttpClientModule} from '@angular/common/http';
+import {CurrentSelectionStateValidator} from "./CurrentSelectionStateValidator.service";
 
 @NgModule({
-  imports:      [ BrowserModule, FormsModule, HttpModule ],
-  declarations: [ AppComponent, DaysSelectComponent, ChamberButtonsComponent, ChamberVariablesMenuComponent, SvgSchedulerComponent, SubmitButtonComponent ],
+  imports:      [ BrowserModule, FormsModule, HttpClientModule],
+  declarations: [ AppComponent, DaysSelectComponent, ChamberButtonsComponent, ChamberVariablesMenuComponent
+    , SvgSchedulerComponent, SubmitButtonComponent ],
   bootstrap:    [ AppComponent ]
-  , providers: [ChamberDataService]
+  , providers: [ChamberDataService, CurrentSelectionStateValidator]
 })
 export class AppModule {
 

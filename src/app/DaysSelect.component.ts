@@ -28,6 +28,8 @@ export class DaysSelectComponent  {
     selectedDaysChangeHandler(selectedDays: number[]) {
 
         this.dataService.setSelectedDays(selectedDays)
+
+
         //this.onDaysChange.emit(selectedDays);
     }
 

@@ -25,7 +25,7 @@ export class SvgSchedulerComponent {
   dataService: any;
   experimentDaysArray: any[];
 
-  consistencyState:boolean = true;
+  consistencyState:any = {status:true};
 
   days: any[] = [];
 
@@ -143,9 +143,13 @@ export class SvgSchedulerComponent {
       _this.consistencyState = _this.checkCurrentStateConsistency();
       console.log("ARE WE OK?", _this.consistencyState);
 
-      if (_this.consistencyState === true) {
+      if (_this.consistencyState.status === true) {
         _this.updateRendered();
       } else {
+
+        console.log(_this.consistencyState);
+        console.log("###############################")
+
         _this.clearUi();
       }
 
@@ -192,8 +196,15 @@ export class SvgSchedulerComponent {
       console.log(_this.schedule)
       _this.consistencyState = _this.checkCurrentStateConsistency();
       console.log("ARE WE OK?", _this.consistencyState);
+      if (_this.consistencyState.status === true) {
+        _this.updateRendered();
+      } else {
 
-      _this.updateRendered();
+        console.log(_this.consistencyState);
+        console.log("###############################")
+
+        _this.clearUi();
+      }
 
 
 
@@ -209,30 +220,18 @@ export class SvgSchedulerComponent {
     /** This method checks if any select state (days, chambers, environmental variable)
      * includes heterogeneous data (days with different data, chambers with different data, etc)
      */
-    let days = this.days;
-    let chambers = this.growthChamberIds;
+    let hasDaysMismatch = false
+      , hasChambersMismatch = false
 
-    //console.log(days, chambers, environment);
-    //console.log(sched);
+	    // First let's filter on environment, chambers and days:
+      , dataPoints = this.schedule.filter(function(dp) {
 
-    // First let's filter on environment, chambers and days:
-    let dataPoints = this.schedule.filter(function(dp) {
-
-
-      if (dp.environment !== this.environment) {
-        return false;
-      }
-
-      if (days.indexOf(dp.day) === -1) {
-        return false;
-      }
-
-      if (chambers.indexOf(dp.chamber) === -1) {
-        return false;
-      }
-      // Finally, we can return true if we've cleared the above conditions:
-      return true;
-    }
+	      if (dp.environment !== this.environment) return false;
+	      if (this.days.indexOf(dp.day) === -1) return false;
+	      if (this.growthChamberIds.indexOf(dp.chamber) === -1) return false;
+	      // Finally, we can return true if we've cleared the above conditions:
+	      return true;
+	    }
     , this
     );
 
@@ -244,7 +243,7 @@ export class SvgSchedulerComponent {
     // TODO: this is actually OK, because there is absolutely no data, not a single empty day or chamber...
     if (dataPoints.length === 0) {
 
-      return true;
+      return {status:true};
     }
 
     // Now, let's compare across days. We will build a two dim array of the data with the first dim
@@ -261,28 +260,15 @@ export class SvgSchedulerComponent {
 
     });
 
-
-    console.log("---------------------")
     // Now, let's sort each 2nd dim:
     dailyData.forEach(function(dataPoints, indx) {
 
-
-      dataPoints.sort(function(a, b) {
-        if (a.minutes === b.minutes) {
-          return 0;
-        } else {
-          return a.minutes > b.minutes;
-        }
+      dataPoints.sort(function(datapoint1, datapoint2) {
+        return datapoint1.minutes === datapoint2.minutes ? 0 : datapoint1.minutes > datapoint2.minutes;
       });
 
-    })
+    }); // END SORTING dailyData
 
-    console.log("---------------------")
-
-
-
-
-    console.log(dailyData);
     // the zeroth element will be undefined b/c we don't have a chamber zero, so start at the first index:
     for (let i=1,l=dailyData.length-1; i<l; i++) {
 
@@ -301,17 +287,13 @@ export class SvgSchedulerComponent {
 
       // The simple equality check is to compare lengths
       if (dailyData[i].length !== dailyData[nextSiblingIndex].length) {
-        console.log("days arrays of differing length!");
-        return false;
-        //return {status:false, dataPoints:groupedTimePoints}
+        hasDaysMismatch = true;
       }
       // We have checked the number (array length) of datapoints across each day, but we still need to check
       // the actual values before assuming consistency.
 
-      let day1 = dailyData[i];
-      let day2 = dailyData[nextSiblingIndex];
-
-
+      let day1 = dailyData[i]
+        , day2 = dailyData[nextSiblingIndex];
 
       for (let j=0,l2=day1.length-1; j<l2; j++) {
 
@@ -322,40 +304,39 @@ export class SvgSchedulerComponent {
           continue;
         }
 
-        let dp1 = day1[j];
-        let dp2 = day2[j];
+        let dp1 = day1[j]
+          , dp2 = day2[j];
 
 
         if (dp1.minutes !== dp2.minutes) {
           console.log("returning false b/c minutes mismatch")
-          return false;
+          hasDaysMismatch = true;
+          break;
         }
 
         if (dp1.value !== dp2.value) {
           console.log("returning false b/c values mismatch")
-          return false;
+          hasDaysMismatch = true;
+          break;
         }
 
         if (dp1.chamber !== dp2.chamber) {
-
           console.log("returning b/c chamber mismatch");
-          return false;
+          hasDaysMismatch = true;
+          break;
         }
-
       }
-
 
     } // END FOR LOOP OVER DAILY DATA:
 
-
-    // TODO: Do we now need to compare across chambers?
+    // NOW WE WANT TO COMPARE THE DATAPOINTS WE HAVE ON A CHAMBER-WISE BASIS:
     let chamberData:any[] = [];
 
+    // Here we setup the array, declaring an empty array for the 2nd dim for each currently selected chamber:
     this.growthChamberIds.forEach(function(chamberId) {
 
       chamberData[chamberId] = [];
     })
-
 
     dataPoints.forEach(function(dp) {
       let chamber = dp.chamber;
@@ -365,38 +346,34 @@ export class SvgSchedulerComponent {
 
     console.log("WHAT IS THE LENGTH OF GROWTH CHAMBERS?", chamberData.length, chamberData);
 
-
     // Let's sort the chamber-wise data first by day and then by minute:
     chamberData.forEach(function(dataPoints, indx) {
+      dataPoints.sort(function(datapoint1, datapoint2) {
 
-      dataPoints.sort(function(a, b) {
+        if (datapoint1.day !== datapoint2.day) {
+          return datapoint1.day > datapoint2.day;
 
-        if (a.day === b.day) {
+        }
 
+        return datapoint1.minutes === datapoint2.minutes ? 0 : datapoint1.minutes > datapoint2.minutes;
+        /*
           if (a.minutes === b.minutes) {
             return 0;
           } else {
             return a.minutes > b.minutes;
           }
 
-        } else {
-
-
-          return a.day > b.day;
-
         }
-
-
+*/
       });
 
-    })
-    // END sorting chamber wise data
+    }); // END sorting chamber wise data
 
 
     console.log("WHAT IS THE DATA CHAMBERWISE?");
     console.log(chamberData, chamberData.length);
 
-
+/*
     this.growthChamberIds.forEach(function(id) {
 
       console.log('GROWTH CHAMBER', id);
@@ -407,9 +384,7 @@ export class SvgSchedulerComponent {
       }
 
     });
-
-
-
+    */
     for (let k=1; k<chamberData.length-1; k++) {
 
       console.log("")
@@ -421,9 +396,8 @@ export class SvgSchedulerComponent {
         }
       }
 
-      console.log(k)
       let nextSiblingIndex = k+1
-        , nextSibling = chamberData[nextSiblingIndex]
+        , nextSibling = chamberData[nextSiblingIndex];
 
       if (isUndefined(nextSibling)) {
 
@@ -435,19 +409,14 @@ export class SvgSchedulerComponent {
         }
       }
 
-      if (isUndefined(nextSibling)) {
-        break;
-      }
-
-
-      console.log("What will be comparing?", k, chamberData[nextSiblingIndex]);
-
+      if (isUndefined(nextSibling)) break;
 
       // Do a simple length check between the two candidates:
       let chamber = chamberData[k];
 
       if (chamber.length !== nextSibling.length) {
-        return false;
+        hasChambersMismatch = true;
+        break;
       }
 
       // The datapoints for the chambers might have the same length, but do they hold the same data?:
@@ -459,22 +428,35 @@ export class SvgSchedulerComponent {
         console.log("we need to compare", dp1, "and", dp2);
 
         if (dp1.value !== dp2.value) {
-          return false;
+          hasChambersMismatch = true;
+          break;
         }
 
         if (dp1.minutes !== dp2.minutes) {
-          return false;
+          hasChambersMismatch = true;
+          break;
         }
 
       } // foreach dataPoint
 
     }
 
-    return true;
+    if (!hasChambersMismatch && !hasDaysMismatch) {
+      return {status:true};
+    }
 
-  } // checkCurrentStateConsistency
+    return {
+      status:false
+      , dayWiseState: !hasDaysMismatch
+      , chamberWiseState: !hasChambersMismatch
+      , chamberWiseData: chamberData
+      , dayWiseData: dailyData
+    }
 
 
+  } // END checkCurrentStateConsistency() METHOD
+
+/*
   checkCurrentChamberStateConsistency() {
     //console.log("What is gcs?", this.growthChamberIds);
 
@@ -520,12 +502,12 @@ export class SvgSchedulerComponent {
 
 
   } // END checkCurrentChamberStateConsistency() method
+*/
 
-
-  timePointsChangeHandler() {
+  //timePointsChangeHandler() {
 
     //this.onTimePointsChange.emit(this.timePoints);
-  }
+//  }
 
 
   // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
@@ -566,7 +548,7 @@ export class SvgSchedulerComponent {
     //this.addTerminalTimePoints();
 
     this.updateRendered();
-    this.timePointsChangeHandler();
+    //this.timePointsChangeHandler();
 
     d3.event.stopPropagation();
   }
@@ -858,20 +840,15 @@ export class SvgSchedulerComponent {
     // Begin the SVG:
     let _this = this;
       this.svg = d3.select("svg");
-
-
-
-
       this.margin = {top: 20, right: 20, bottom: 40, left: 20};
-
       this.width = +this.svg.attr("width") - this.margin.left - this.margin.right;
       this.height = +this.svg.attr("height") - this.margin.top - this.margin.bottom;
 
 
-    var g = this.svg.append("g").attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
+    let g = this.svg.append("g").attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
 
-    var circleAttrs = {
+    let circleAttrs = {
       cx: function (d: any) {
         return this.xScale(d.x_position);
       },
@@ -1065,7 +1042,7 @@ export class SvgSchedulerComponent {
     //_this.addTerminalTimePoints()
 
     //_this.updateRendered();
-    _this.timePointsChangeHandler();
+    //_this.timePointsChangeHandler();
 
 
 

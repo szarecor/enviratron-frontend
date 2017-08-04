@@ -126,8 +126,6 @@ export class ChamberButtonsComponent implements OnInit {
       // without it, the Svg Component seems to be one click behind in state at all times.
       window.setTimeout(
         function() {
-
-          console.log("What are we pushing to the data service?", _this.chambers);
           _this.dataService.setChambers(_this.chambers);
         }
 
