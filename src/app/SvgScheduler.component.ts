@@ -3,10 +3,11 @@
  */
 import {Component, Input, Output, EventEmitter} from '@angular/core';
 import {ChamberDataService} from './data.service';
+import {CurrentSelectionStateValidator} from "./CurrentSelectionStateValidator.service";
 import {EnvironmentalVariableTimePoint} from './chamber.interface';
-import {BehaviorSubject} from "rxjs/BehaviorSubject";
-import {first} from "rxjs/operator/first";
 import {isUndefined} from "util";
+import {rendererTypeName} from "@angular/compiler";
+//import {start} from "repl";
 
 declare var d3: any;
 
@@ -21,8 +22,14 @@ declare var d3: any;
 export class SvgSchedulerComponent {
   //@Input() dayCount: number = 0;
 
+  private logging:boolean = false;
   @Input() selectedDays: number[] = [];
-  dataService: any;
+  //private dataService: ChamberDataService;
+  //validationService: CurrentSelectionStateValidator;
+
+  validationState: any;
+
+
   experimentDaysArray: any[];
 
   consistencyState:any = {status:true};
@@ -35,35 +42,13 @@ export class SvgSchedulerComponent {
   width: number;
   height: number;
   timePoints: any[] = [];
-/*
-    {
-      time: 316,
-      value: 32,
-      x: 187,
-      y: 68
-    },
-    {
-      time: 711,
-      value: 30,
-      x: 396,
-      y: 80
-    },
-
-    {
-      time: 1054,
-      value: 17,
-      x: 577,
-      y: 160
-    }
-
-  ];
-  */
 
 	circleAttrs: any = {
 
     cx: function (d: any) {
       return this.xScale(d.x);
     },
+
     cy: function (d: any) {
       return this.yScale(d.y);
     },
@@ -77,6 +62,11 @@ export class SvgSchedulerComponent {
 
   currentValue : number;
   currentTime : any;
+  rawCoords: any[] = [0,0];
+
+
+  hoursMargin:number = 4;
+
 
   schedule : any[] = [];
 
@@ -86,7 +76,7 @@ export class SvgSchedulerComponent {
   @Output() onNewTimePoint: EventEmitter<any> = new EventEmitter<any>();
 
 
-  growthChamberIds: any[] = [];
+  chambers: number[] = [];
   environment: string; //BehaviorSubject<string> = new BehaviorSubject("");
 
   line: any = d3.line()
@@ -99,8 +89,16 @@ export class SvgSchedulerComponent {
   .curve(d3.curveLinear);
 
 
-  constructor(private ds: ChamberDataService) {
-    this.dataService = ds;
+  constructor(private dataService: ChamberDataService, private validationService: CurrentSelectionStateValidator) {
+
+    let _this = this;
+
+
+    this.validationService.getState().subscribe(function(validationState) {
+      _this.validationState = validationState;
+      if (_this.logging) console.log("\nSVG COMPONENT RECEIVING NEW VALIDATION STATE FROM SERVICE")
+      if (_this.logging) console.log(validationState);
+    });
 
   }
 
@@ -114,7 +112,7 @@ export class SvgSchedulerComponent {
     // We want to call this once and not subscribe:
     //this.schedule = this.dataService.getSchedule()
 
-    this.dataService.getCurrentEnvironmentalParameter().subscribe(function (env) {
+    this.dataService.getEnvironment().subscribe(function (env) {
 
       // TODO: what's the best way to NOT run clearUi onInit?
       let currentEnvironment = _this.environment
@@ -128,28 +126,28 @@ export class SvgSchedulerComponent {
         _this.clearUi();
       }
       _this.loadData();
-      console.log("RECEIVING NEW ENV, CALLING updateRendered()")
-      _this.updateRendered();
+
+      if (_this.validationState.isValid) {
+
+        if (_this.logging) console.log("RECEIVING NEW ENV, CALLING updateRendered()")
+        _this.updateRendered();
+      }
 
     })
 
 
-    this.dataService.getSelectedChambers().subscribe(function (chambers) {
-      _this.growthChamberIds = chambers;
+    this.dataService.getSelectedChambers().subscribe(function(chambers) {
+
+      if (_this.logging) console.log("SVG COMPONENT RECEIVING NEW GROWTH CHAMBERS", chambers);
+
+      _this.chambers = chambers;
       _this.loadData();
-      console.log("RECEIVING NEW CHAMBERS, CALLING updateRendered()");
-      //console.log(_this.checkCurrentChamberStateConsistency());
 
-      _this.consistencyState = _this.checkCurrentStateConsistency();
-      console.log("ARE WE OK?", _this.consistencyState);
+      if (_this.logging) console.log("RECEIVING NEW CHAMBERS, CALLING updateRendered()");
 
-      if (_this.consistencyState.status === true) {
+      if (_this.validationState.isValid) {
         _this.updateRendered();
       } else {
-
-        console.log(_this.consistencyState);
-        console.log("###############################")
-
         _this.clearUi();
       }
 
@@ -157,7 +155,7 @@ export class SvgSchedulerComponent {
 
 
     this.dataService.getSchedule().subscribe(function (schedule: any[]) {
-      console.log("svg comp receiving schedule from dataService", schedule)
+      if (_this.logging) console.log("svg comp receiving schedule from dataService", schedule)
       _this.schedule = schedule;
 
       _this.loadData();
@@ -169,45 +167,24 @@ export class SvgSchedulerComponent {
     this.dataService.getDays().subscribe(function (days) {
 
 
-      console.log("getDays subscription called", days)
+      if (_this.logging) console.log("getDays subscription called", days)
 
       let previousDaysSelection = _this.days;
       _this.days = days;
-
-      if (previousDaysSelection.length === 0) {
-        return;
-
-      }
-
-      previousDaysSelection = previousDaysSelection.sort(function (d1: number, d2: number) {
-
-        if (d1 === d2) {
-          return 0;
-        }
-        return d1 < d2 ? -1 : 1;
-
-      })
-
-
-
-      //_this.clearUi();
       _this.loadData();
 
-      console.log(_this.schedule)
-      _this.consistencyState = _this.checkCurrentStateConsistency();
-      console.log("ARE WE OK?", _this.consistencyState);
+      if (_this.logging) console.log(_this.schedule)
+      //_this.consistencyState = _this.checkCurrentStateConsistency();
+      if (_this.logging) console.log("ARE WE OK?", _this.consistencyState);
       if (_this.consistencyState.status === true) {
         _this.updateRendered();
       } else {
 
-        console.log(_this.consistencyState);
-        console.log("###############################")
+        if (_this.logging) console.log(_this.consistencyState);
+        if (_this.logging) console.log("###############################")
 
         _this.clearUi();
       }
-
-
-
     })
 
     //_this.loadData()
@@ -216,304 +193,6 @@ export class SvgSchedulerComponent {
   } // END ngOnInit()
 
 
-  checkCurrentStateConsistency() {
-    /** This method checks if any select state (days, chambers, environmental variable)
-     * includes heterogeneous data (days with different data, chambers with different data, etc)
-     */
-    let hasDaysMismatch = false
-      , hasChambersMismatch = false
-
-	    // First let's filter on environment, chambers and days:
-      , dataPoints = this.schedule.filter(function(dp) {
-
-	      if (dp.environment !== this.environment) return false;
-	      if (this.days.indexOf(dp.day) === -1) return false;
-	      if (this.growthChamberIds.indexOf(dp.chamber) === -1) return false;
-	      // Finally, we can return true if we've cleared the above conditions:
-	      return true;
-	    }
-    , this
-    );
-
-    console.log("WHAT IS THE FILTERED ARRAY?")
-    console.log(dataPoints);
-
-    // If there's no data for the current environment, we're OK:
-    // TODO: Reconsider this, there is still work to do!!!!!!!
-    // TODO: this is actually OK, because there is absolutely no data, not a single empty day or chamber...
-    if (dataPoints.length === 0) {
-
-      return {status:true};
-    }
-
-    // Now, let's compare across days. We will build a two dim array of the data with the first dim
-    // being days and the 2nd dim being the datapoints for the relevant day.
-    let dailyData:any[] = [];
-
-    dataPoints.forEach(function(dp) {
-      let day = dp.day;
-
-      if (isUndefined(dailyData[day])) {
-        dailyData[day] = [];
-      }
-      dailyData[day].push(dp);
-
-    });
-
-    // Now, let's sort each 2nd dim:
-    dailyData.forEach(function(dataPoints, indx) {
-
-      dataPoints.sort(function(datapoint1, datapoint2) {
-        return datapoint1.minutes === datapoint2.minutes ? 0 : datapoint1.minutes > datapoint2.minutes;
-      });
-
-    }); // END SORTING dailyData
-
-    // the zeroth element will be undefined b/c we don't have a chamber zero, so start at the first index:
-    for (let i=1,l=dailyData.length-1; i<l; i++) {
-
-
-      if (isUndefined(dailyData[i])) { // || isUndefined(dailyData[i+1])) {
-        // This condition is caused by unassigned array indices (ie day1 is not selected...)
-        console.log("undefined days are selected!");
-        continue;
-      }
-
-      let nextSiblingIndex = i+1;
-
-      while (isUndefined(dailyData[nextSiblingIndex])) {
-        nextSiblingIndex++;
-      }
-
-      // The simple equality check is to compare lengths
-      if (dailyData[i].length !== dailyData[nextSiblingIndex].length) {
-        hasDaysMismatch = true;
-      }
-      // We have checked the number (array length) of datapoints across each day, but we still need to check
-      // the actual values before assuming consistency.
-
-      let day1 = dailyData[i]
-        , day2 = dailyData[nextSiblingIndex];
-
-      for (let j=0,l2=day1.length-1; j<l2; j++) {
-
-        console.log("COMPARING", j, "TO", j+1);
-
-        if (isUndefined(day1[j])) {
-          console.log("DOES THIS EVER HAPPEN? WHAT DOES IT MEAN?")
-          continue;
-        }
-
-        let dp1 = day1[j]
-          , dp2 = day2[j];
-
-
-        if (dp1.minutes !== dp2.minutes) {
-          console.log("returning false b/c minutes mismatch")
-          hasDaysMismatch = true;
-          break;
-        }
-
-        if (dp1.value !== dp2.value) {
-          console.log("returning false b/c values mismatch")
-          hasDaysMismatch = true;
-          break;
-        }
-
-        if (dp1.chamber !== dp2.chamber) {
-          console.log("returning b/c chamber mismatch");
-          hasDaysMismatch = true;
-          break;
-        }
-      }
-
-    } // END FOR LOOP OVER DAILY DATA:
-
-    // NOW WE WANT TO COMPARE THE DATAPOINTS WE HAVE ON A CHAMBER-WISE BASIS:
-    let chamberData:any[] = [];
-
-    // Here we setup the array, declaring an empty array for the 2nd dim for each currently selected chamber:
-    this.growthChamberIds.forEach(function(chamberId) {
-
-      chamberData[chamberId] = [];
-    })
-
-    dataPoints.forEach(function(dp) {
-      let chamber = dp.chamber;
-      chamberData[chamber].push(dp);
-
-    });
-
-    console.log("WHAT IS THE LENGTH OF GROWTH CHAMBERS?", chamberData.length, chamberData);
-
-    // Let's sort the chamber-wise data first by day and then by minute:
-    chamberData.forEach(function(dataPoints, indx) {
-      dataPoints.sort(function(datapoint1, datapoint2) {
-
-        if (datapoint1.day !== datapoint2.day) {
-          return datapoint1.day > datapoint2.day;
-
-        }
-
-        return datapoint1.minutes === datapoint2.minutes ? 0 : datapoint1.minutes > datapoint2.minutes;
-        /*
-          if (a.minutes === b.minutes) {
-            return 0;
-          } else {
-            return a.minutes > b.minutes;
-          }
-
-        }
-*/
-      });
-
-    }); // END sorting chamber wise data
-
-
-    console.log("WHAT IS THE DATA CHAMBERWISE?");
-    console.log(chamberData, chamberData.length);
-
-/*
-    this.growthChamberIds.forEach(function(id) {
-
-      console.log('GROWTH CHAMBER', id);
-
-      if (isUndefined(chamberData[id])) {
-        // We have a chamber in the selection list that doesn't have any data
-        console.log("CHAMBER", id, "HAS NO DATA!");
-      }
-
-    });
-    */
-    for (let k=1; k<chamberData.length-1; k++) {
-
-      console.log("")
-
-      if (isUndefined(chamberData[k])) {
-
-        while (k<chamberData.length-1 && isUndefined(chamberData[k])) {
-          k++;
-        }
-      }
-
-      let nextSiblingIndex = k+1
-        , nextSibling = chamberData[nextSiblingIndex];
-
-      if (isUndefined(nextSibling)) {
-
-        console.log("we have an undefined chamber", nextSibling, nextSiblingIndex)
-
-        while (nextSiblingIndex < chamberData.length-1 && isUndefined(nextSibling)) {
-          nextSiblingIndex+=1;
-          nextSibling = chamberData[nextSiblingIndex];
-        }
-      }
-
-      if (isUndefined(nextSibling)) break;
-
-      // Do a simple length check between the two candidates:
-      let chamber = chamberData[k];
-
-      if (chamber.length !== nextSibling.length) {
-        hasChambersMismatch = true;
-        break;
-      }
-
-      // The datapoints for the chambers might have the same length, but do they hold the same data?:
-      for (let j=0, dpLength=chamber.length; j<dpLength; j++) {
-
-        let dp1 = chamber[j]
-          , dp2 = nextSibling[j];
-
-        console.log("we need to compare", dp1, "and", dp2);
-
-        if (dp1.value !== dp2.value) {
-          hasChambersMismatch = true;
-          break;
-        }
-
-        if (dp1.minutes !== dp2.minutes) {
-          hasChambersMismatch = true;
-          break;
-        }
-
-      } // foreach dataPoint
-
-    }
-
-    if (!hasChambersMismatch && !hasDaysMismatch) {
-      return {status:true};
-    }
-
-    return {
-      status:false
-      , dayWiseState: !hasDaysMismatch
-      , chamberWiseState: !hasChambersMismatch
-      , chamberWiseData: chamberData
-      , dayWiseData: dailyData
-    }
-
-
-  } // END checkCurrentStateConsistency() METHOD
-
-/*
-  checkCurrentChamberStateConsistency() {
-    //console.log("What is gcs?", this.growthChamberIds);
-
-    if (this.growthChamberIds.length === 1) {
-      return {status: true, dataPoints: null};
-    }
-
-
-    // We are going to create a two-dim array of timePoints
-    // the first dim will be chamber IDs and the 2nd dim will be the datapoints for the relevant chamber
-    let groupedTimePoints:any[] = [];
-
-    this.growthChamberIds.forEach(function(chamberId) {
-      groupedTimePoints[chamberId] = this.schedule.filter(function(dp) {
-        return dp.chamber === chamberId;
-
-      });
-
-    }, this)
-
-    //console.log("WHAT IS groupedTimePoints?", groupedTimePoints);
-    // If the two arrays have the same length, we still need to compare the actual data:
-    groupedTimePoints.forEach(function(chamberData) {
-
-      console.log(chamberData);
-    })
-
-    // the zeroth element will be undefined b/c we don't have a chamber zero, so start at the first index:
-    for (let i=1,l=groupedTimePoints.length-1; i<l; i++) {
-      if (isUndefined(groupedTimePoints[i]) || isUndefined(groupedTimePoints[i+1])) {
-        continue;
-      }
-
-      // The simple equality check is to compare lengths
-      if (groupedTimePoints[i].length !== groupedTimePoints[i+1].length) {
-        return {status:false, dataPoints:groupedTimePoints}
-      }
-
-
-
-    }
-    return {status: true, dataPoints: null};
-
-
-  } // END checkCurrentChamberStateConsistency() method
-*/
-
-  //timePointsChangeHandler() {
-
-    //this.onTimePointsChange.emit(this.timePoints);
-//  }
-
-
-  // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
-  //selectedDaysChangeHandler(selectedDays: string[]) {
-  //  this.onDaysChange.emit(selectedDays);
-  //}
 
 
   clearUi() {
@@ -525,9 +204,6 @@ export class SvgSchedulerComponent {
     s.remove();
 
     this.timePoints = [];
-
-
-
   }
 
 
@@ -556,6 +232,27 @@ export class SvgSchedulerComponent {
 
   updateRendered() {
 
+    if (this.logging) console.log("SVG updateRendered() CALLED")
+    if (this.logging) console.log("WHAT IS CHAMBERS?", this.chambers)
+
+    // Make sure the timepoints are properly sorted time-wise:
+
+    this.timePoints.sort(function(a, b) {
+
+      if (a.day === b.day) {
+        if (a.minutes === b.minutes) {
+          return 0;
+        } else {
+
+          return a.minutes > b.minutes ? 1 : -1;
+        }
+
+      } else {
+
+        return a.day > b.day ? 1 : -1;
+
+      }
+    });
     this.svg.selectAll("path").data([]).exit().remove();
     this.svg.selectAll("circle").data([]).exit().remove();
 
@@ -565,6 +262,9 @@ export class SvgSchedulerComponent {
     //console.log("in updateRendered, what is schedule?", this.schedule);
 
     // We need to filter here?
+
+
+    /*
     this.timePoints = this.schedule.filter(function(dp) {
 
       if (this.days.indexOf(dp.day) === -1) {
@@ -575,7 +275,7 @@ export class SvgSchedulerComponent {
         return false;
       }
 
-      if (this.growthChamberIds.indexOf(dp.chamber) === -1) {
+      if (this.chambers.indexOf(dp.chamber) === -1) {
         return false;
       }
 
@@ -583,24 +283,126 @@ export class SvgSchedulerComponent {
 
     }, this);
 
+    */
+
     // We have filtered schedule, but it still might have redundant points in it
     // for example, two points identical except for the chamber or day
+//    this.timePoints.sort(function (a, b) {
+/*
+      let mins1 = (a.day * 24 * 60) + a.minutes,
+          mins2 = (b.day * 24 * 60) + b.minutes;
+
+      console.log(a.day, a.minutes, mins1);
+      console.log(b.day, b.minutes, mins2);
+      console.log("-------------------------")
+      */
+
+/*
+      if (a.day === b.day) {
+
+        return a.minutes > b.minutes ? 1 : -1
+
+      } else {
+        return a.day > b.day ? 1 : -1;
+
+      }
+      */
+
+
+      //return (a.day - b.day || a.minutes - b.minutes); // ? 1 : -1;
+
+      /*
+      if (a.day < b.day) {
+        return 1;
+      } else if (a.day >= b.day) {
+        return (a.minutes > b.minutes) ? 1 : -1;
+      }
+
+      return 0;
+      */
 
 
 
-    if (this.timePoints.length === 0) {
-      return;
-    }
 
-
-    this.timePoints.sort(function (a, b) {
+      /*
       if (a === b) {
         return 0;
       } else {
+
         return a.x_position < b.x_position ? -1 : 1;
       }
+*/
+   // });
 
-    });
+
+    //console.log("AFTER SORTING IN updateRendered():");
+    //console.log(this.timePoints);
+
+    if (this.timePoints.length === 0) {
+
+      // Let's create synthetic start and end points, based on the previous day's values:
+/*
+      let previousDays = [];
+      for (let i=1,l=this.days[0]; i<l; i++) {
+        previousDays.push(i)
+      }
+
+
+      let previousDaysPoints = this.schedule.filter(function(dp) {
+
+        if (previousDays.indexOf(dp.day) === -1) {
+          return false;
+        }
+
+        if (this.environment !== dp.environment) {
+          return false;
+        }
+
+        if (this.chambers.indexOf(dp.chamber) === -1) {
+          return false;
+        }
+        return true;
+      }, this);
+
+
+      previousDaysPoints.sort(function(a, b) {
+
+        if (a.day == b.day) {
+
+          if (a.x_position === b.x_position) return 0;
+          return a.x_position > b.x_position ? 1 : -1;
+
+        } else {
+
+          return a.day > b.day ? 1 : -1;
+
+        }
+      })
+
+
+      if (previousDaysPoints.length === 0) return;
+
+      */
+
+      /*
+      let tmpTimePoint = previousDaysPoints[previousDaysPoints.length-1];
+
+      let leftTerminalPoint = JSON.parse(JSON.stringify(tmpTimePoint));
+      leftTerminalPoint.minutes = 0;
+      leftTerminalPoint.x_position = 30;
+
+      let rightTerminalPoint = JSON.parse(JSON.stringify(tmpTimePoint));
+      rightTerminalPoint.minutes = 1430;
+      rightTerminalPoint.x_position = 746;
+
+      this.timePoints = [leftTerminalPoint, rightTerminalPoint];
+
+      this.dataService.addScheduleTimePoint(leftTerminalPoint);
+      this.dataService.addScheduleTimePoint(rightTerminalPoint);;
+	    */
+
+    }
+
 
     this.svg.append("path")
     .datum(this.timePoints)
@@ -611,6 +413,16 @@ export class SvgSchedulerComponent {
     .attr("stroke-width", 1.5)
     .attr("d", this.line);
 
+    // TODO: refactor this so that each line is it's own path instead of a single path
+    // for all points
+
+    /*
+      .classed("not-today", function(tp) {
+        console.log("WHAT IS TIMEPOINT?")
+        console.log(tp)
+        return tp.x_position < 0;
+      })
+*/
 
     var mySelection = this.svg.selectAll("circle")
     .data(
@@ -618,7 +430,7 @@ export class SvgSchedulerComponent {
       // tell d3 to bind to a property of the obj and not simply it's array pos:
       function (d: any, i: number) {
         //return d.time;
-        return d.minutes
+        return [d.day, d.minutes]
       }
     );
 
@@ -628,6 +440,8 @@ export class SvgSchedulerComponent {
     .enter()
     .append("circle")
     .attr("cx", function (d: any) {
+
+
       return d.x_position;
     })
     .attr("cy", function (d: any) {
@@ -636,13 +450,22 @@ export class SvgSchedulerComponent {
     .attr("r", 5)
     //.style("stroke", "steelblue")
     //.style("stroke-width", 2)
-    .attr("data-celcius", function (d: any) {
+    .attr("data-value", function (d: any) {
       return d.value;
     })
     .attr("data-time", function (d: any) {
       return d.minutes;
     })
+    .attr("data-day", function(d: any) {
+      return d.day;
+
+    })
     .classed("time-series-marker", true)
+    .classed("not-today", function(d) {
+
+      return _this.days.indexOf(d.day) === -1;
+
+    })
     .on(
       "click",
       function (p: any) {
@@ -652,27 +475,227 @@ export class SvgSchedulerComponent {
 
     mySelection.exit().remove();
 
+    // Here we are going to mod the points for yesterday's and tomorrow's datapoints:
+
+    /*
+    d3.selectAll('g.grid:nth-child(1) g.tick')
+    .filter(function(d){ return d.getHours() === 0 && d.getMinutes() == 0;} )
+    .select('line') //grab the tick line
+    //.attr('class', 'quadrantBorder') //style with a custom class and CSS
+    //.style('stroke', "green");
+    .style('stroke-width', 2)
+    .style('stroke', '#999');
+    */
+
+
+
 
   } // updateRendered()
+
+
+  getPreviousDayDataPoints() {
+
+
+
+    let previousDay = this.days[0]-1;
+
+    let dataPoints = [];
+
+    //console.log("WHAT IS PREVIOUS DAY?", previousDay);
+
+    let previousDayData = this.schedule.filter(function(dp) {
+
+      if (dp.environment !== this.environment) return false;
+
+      if (dp.day !== previousDay) return false;
+
+      if (this.chambers.indexOf(dp.chamber) === -1) return false;
+
+      return true;
+
+    }, this).map(function(dp) {
+
+      return JSON.parse(JSON.stringify(dp));
+    });
+    //console.log("WHAT IS PREVIOUS DAYS DATA?")
+    //console.log(previousDayData);
+
+    if (!isNaN(previousDay) && !isUndefined(previousDayData) && previousDayData.length > 0) {
+
+      previousDayData.forEach(function(dp) {
+        let tmpDate = new Date()
+
+        // Roll back one day:
+        tmpDate.setHours(tmpDate.getHours() - 24);
+        // Roll forward to the correct hour:
+        tmpDate.setHours(dp.minutes/60);
+        // And roll forward to the minute:
+        tmpDate.setMinutes(dp.minutes % 60);
+
+        dp.x_position = this.xScale(tmpDate);
+
+
+        //if (dp.x_position >= 0) {
+          //dataPoints.splice(0, 0, dp);
+          // Here we are going to check/filter for redudant datapoints from diff chambers:
+
+          let redundancyCheck = dataPoints.filter(function(dp2) {
+
+            if (dp2.minutes === dp.minutes) return true;
+
+            return false;
+
+          })
+
+          if (redundancyCheck.length === 0) dataPoints.push(dp);
+
+        //}
+
+
+
+      }, this);
+
+    } // if previousDay and previousDayData
+
+    return dataPoints;
+  }
+
+  getFollowingDayDataPoints() {
+
+
+    let _this = this;
+
+    // Now we need to do for the following day what we just did for the previous day:
+
+    let followingDay = this.days[this.days.length-1] + 1;
+    let followingDayData = this.schedule.filter(function(dp) {
+      if (dp.environment !== this.environment) return false;
+
+      if (dp.day !== followingDay) return false;
+
+      if (this.chambers.indexOf(dp.chamber) === -1) return false;
+
+      return true;
+
+    }, this);
+
+    // WE need to bin the following day's data by chamber and make sure each chamber is identical before rendering,
+    // otherwise it's confusing and inaccurate.
+    let chamberwiseData = {}
+
+
+
+    followingDayData.forEach(function(dp) {
+      let strChamberId = dp.chamber.toString();
+
+      if (!Object.keys(chamberwiseData).includes(strChamberId)) chamberwiseData[strChamberId] = [];
+
+
+      let clone = JSON.parse(JSON.stringify(dp));
+
+      chamberwiseData[strChamberId].push(clone);
+    })
+
+
+    // Now make sure each array in the chamberwiseData is properly sorted:
+
+    let chamberKeys = Object.keys(chamberwiseData);
+
+
+    chamberKeys.forEach(function(key) {
+
+      let arr = chamberwiseData[key];
+
+      arr.sort(function(a, b) {
+        // arr should be limited to a single day, chamber and environment, so we only need to address minutes:
+        if (a.minutes === b.minutes) return 0;
+
+        return a.minutes > b.minutes ? 1 : -1;
+
+      })
+
+      // Now that we're sorted, let's calc a new x position:
+
+      arr.forEach(function(dp) {
+        let tmpDate = new Date()
+        tmpDate.setHours(tmpDate.getHours() + 24);
+        // Roll forward to the correct hour:
+        tmpDate.setHours(dp.minutes/60);
+        // And roll forward to the minute:
+        tmpDate.setMinutes(dp.minutes % 60);
+
+        dp.x_position = _this.xScale(tmpDate)
+
+      })
+
+    })
+
+
+
+    if (chamberKeys.length === 1) {
+      // We can proceed without checking consistency across chambers b/c only a single chamber is selected;
+
+
+      return chamberwiseData[chamberKeys[0]][0];
+      /*
+      chamberwiseData[chamberKeys[0]].forEach(function(dp) {
+
+
+        dataPoints.push(dp);
+
+      })
+      */
+
+    } else if (chamberKeys.length > 1) {
+
+      // If we have multiple chambers, we need to check if their data is consistent:
+      let mismatch = false;
+
+      for (let i=0, l = chamberKeys.length-1; i<l; i++) {
+
+        let j = i + 1;
+
+        let key1 = chamberKeys[i], key2 = chamberKeys[j];
+        let arr1 = chamberwiseData[key1], arr2 = chamberwiseData[key2];
+
+
+
+        if (arr1.length !== arr2.length) {
+          mismatch = true;
+          break;
+
+        } else {
+
+          for (let ii=0, ll=arr1.length; ii<ll; ii++) {
+
+            if (arr1[ii].value !== arr2[ii].value) {
+
+              mismatch = true;
+              break;
+            }
+
+          }
+
+        }
+
+      } // for chamberKeys.length
+
+      if (mismatch === false) {
+
+        let singleChamberData = chamberwiseData[chamberKeys[0]];
+        return singleChamberData;
+
+      }
+    }
+
+  }
 
 
   loadData() {
     // This method contains the logic of what to render at the moment from the larger schedule array
     // based on chamber selection, environmental variable and days
 
-
-    //console.log("---------------")
-    //console.log("loadData called")
-    //console.log(this.timePoints)
-    //console.log('environment:', this.environment)
-    //console.log('growthChamberIds:', this.growthChamberIds)
-    //console.log('days:', this.days)
-    //console.log(this.schedule);
-    //console.log("---------------")
-
     let _this = this;
-
-        //, days = this.days;
 
 
     // Take all of the schedule dataPoints from the data service and filter it down to only the datapoints
@@ -680,12 +703,11 @@ export class SvgSchedulerComponent {
 
     let dataPoints = this.schedule.filter(function(dp) {
 
-      if (_this.growthChamberIds.indexOf(dp.chamber) === -1) {
+      if (_this.chambers.indexOf(dp.chamber) === -1) {
         return false;
       }
 
       if (this.days.indexOf(dp.day) === -1) {
-
         return false;
       }
 
@@ -723,21 +745,22 @@ export class SvgSchedulerComponent {
 
 
     // Now we need to do the same thing for chambers where there are multiple chambers selected that have separate time points:
-    if (_this.growthChamberIds.length > 1) {
+    if (_this.chambers.length > 1) {
 
 
-      // growthChamberIds is already sorted for us:
+      // chambers is already sorted for us:
       // Simply defaulting to the lowest growth chamber ID doesn't work b/c that chamber might not have data...
-      let firstChamberId = _this.growthChamberIds[0];
+      let firstChamberId = _this.chambers[0];
       let filteredDataPoints = []
 
 
-      for (var i=0,l=_this.growthChamberIds.length; i<l; i++) {
+      for (var i=0,l=_this.chambers.length; i<l; i++) {
 
         filteredDataPoints = dataPoints.filter(function(dp) {
-          return dp.chamber === _this.growthChamberIds[i];
+          return dp.chamber === _this.chambers[i];
         })
 
+        // TODO: I'm not sure about this logic....
         if (filteredDataPoints.length > 0) {
           dataPoints = filteredDataPoints;
           break;
@@ -746,57 +769,134 @@ export class SvgSchedulerComponent {
 
     }
 
-    // If we have no data for the day(s) at hand, we want to look at previous days and extend
-    // the last value we have through the day(s) at hand
+    // We also want to show the trailing data from the day before and leading data for the day after
+    // However, we are only going to do that if the data for the day in question is consistent across days and chambers
+    // Otherwise, it is confusing.
+    //console.log("WHAT ARE THE DATAPOINTS?")
+    //console.log(dataPoints)
 
-    /*
-    if (dataPoints.length === 0 && this.schedule.length > 0) {
-      let day = this.days[0];
 
 
-      while (day > 1) {
+    let nextDayData = this.getFollowingDayDataPoints();
 
-        day--;
+    console.log("WHAT IS NEXT DAY DATA?");
+    console.log(nextDayData)
 
-        // Let's see if we have any data:
-        let previousDaysData = this.schedule.filter(function(timePoint) {
+    if (!isUndefined(nextDayData)) {
 
-          // Exclude any data related to a different environmental variable:
-          if (timePoint.environment !== _this.environment) { return false; }
-
-          // Exclude anything for a different chamber,
-          // because we generate a separate timePoint for each chamber when adding points and multiple chambers are
-          // selected, it's pretty straighforward to compare the this.growthChamberIds array to the single chamberId
-          // of each timePoint in the schedule
-          if (this.growthChamberIds.indexOf(timePoint.chamber) === -1) {
-            return false;
-          }
-
-          // is this for the day @ hand?
-          return timePoint.day === day;
-
-        }, this)
-
-        if (previousDaysData.length !== 0) {
-
-          let previousDataPoint = previousDaysData[previousDaysData.length-1]
-
-          let startPoint = JSON.parse(JSON.stringify(previousDataPoint))
-          let endPoint = JSON.parse(JSON.stringify(previousDataPoint))
-
-          startPoint.day = this.days[0]
-          startPoint.timePoint = 0;
-          startPoint.x_position = 0;
-
-          endPoint.day = this.days[0]
-          dataPoints = [startPoint, endPoint]
-          break;
-
-        }
-      }
+      dataPoints = dataPoints.concat(nextDayData);
+      //dataPoints.push(nextDayData);
     }
 
+    let previousDayData = this.getPreviousDayDataPoints();
+    dataPoints = dataPoints.concat(previousDayData);
+
+
+/*
+
+    if (!isNaN(previousDay) && !isUndefined(previousDayData) && previousDayData.length > 0) {
+
+      // At this point we have an array of data for the previous day, but we need to pull it apart by chamber and see if
+      // it's different on a chamber-wise basis.
+      let previousDayDataByChamber = {};
+
+      previousDayData.forEach(function (dp, i) {
+
+        // When using a number (chamber) as a object key, it's getting automagically converted to a string and
+        // causing issues with the includes() method, so let's go ahead and explicitly work with strings:
+        let chamberIdStr: string = dp.chamber.toString();
+
+        if (!Object.keys(previousDayDataByChamber).includes(chamberIdStr)) previousDayDataByChamber[chamberIdStr] = [];
+
+        previousDayDataByChamber[chamberIdStr].push(dp);
+      });
+
+      // Now we need to sort each array in our object and pare each array down to the last element:
+      for (let ky of this.chambers) {
+
+
+        if (!isUndefined(previousDayDataByChamber[ky])) {
+
+          previousDayDataByChamber[ky].sort(function (a, b) {
+            return a.minutes - b.minutes;
+          })
+        }
+
+      }
+
+      // Now pare down to one element:
+      for (let ky of Object.keys(previousDayDataByChamber)) {
+        let tmpArr = previousDayDataByChamber[ky]
+
+
+
+        let dp = tmpArr[tmpArr.length-1];
+        // We need to adjust the x_position property to reflect it's from the previous day:
+
+        let tmpDate = new Date()
+
+        tmpDate.setHours(tmpDate.getHours() - 24);
+
+        tmpDate.setHours(dp.minutes/60);
+        tmpDate.setMinutes(dp.minutes % 60);
+
+
+        console.log("WHAT IS ADJUSTED DATE?", tmpDate, _this.xScale(tmpDate));
+
+
+        let tmpVal = (24*60) - dp.minutes;
+
+        console.log(dp);
+
+        console.log('WHAT IS ADJUSTED MINUTES?', tmpVal, _this.xScale(tmpVal))
+
+
+        dp.x_position = _this.xScale(tmpDate);
+
+        console.log("WHAT IS X?????", _this.xScale(dp.value));
+        console.log("WHAT IS X?????", _this.xScale(0));
+        console.log("WHAT IS X?????", _this.xScale(100));
+
+        previousDayDataByChamber[ky] = dp;
+      }
+
+      console.log("AND GROUPED BY CHAMBER:");
+      console.log(previousDayDataByChamber);
+
+      // Now, finally, we can do a simple equality check across the chambers:
+      let kys = Object.keys(previousDayDataByChamber);
+      let dataIsConsistent = true;
+
+      for (let i=0,l=kys.length; i<l-1; i++) {
+        let j = i+1;
+
+        let dp1 = previousDayDataByChamber[kys[i]]
+          , dp2 = previousDayDataByChamber[kys[i+1]];
+
+
+        if (dp1.minutes !== dp2.minutes || dp1.value !== dp2.value) {
+          dataIsConsistent = false;
+          break;
+        }
+
+      }
+
+      if (dataIsConsistent) {
+
+        console.log("splicing");
+        console.log(dataPoints);
+
+        //dataPoints.splice(0, 0, previousDayDataByChamber[kys[0]]);
+
+        console.log(dataPoints);
+      }
+
+
+      console.log("IS CONSISTENT?", dataIsConsistent);
+    } // END IF THERE IS DATA FOR THE PREVIOUS DAY
+
     */
+
 
     this.timePoints = dataPoints;
 
@@ -817,6 +917,7 @@ export class SvgSchedulerComponent {
 
     initSvg(envParam : string) {
 	    // this function handles the initial rendering and bootstrapping of the the D3 SVG
+
 
       let yDomain;
 
@@ -858,20 +959,30 @@ export class SvgSchedulerComponent {
       r: 6
     };
 
+
     var startDate = new Date();
-    startDate.setHours(-1, 0, 0);
+    startDate.setHours(-_this.hoursMargin, 0, 0);
     var endDate = new Date();
     //endDate.setHours(23, 59, 0);
-    endDate.setHours(25, 0, 0);
+    endDate.setHours(24+_this.hoursMargin, 0, 0);
 
       _this.xScale = d3.scaleTime()
     .domain([startDate, endDate])
     .range([0, this.width]);
 
+      //console.log("WHAT IS TICKS?")
+      //console.log(d3.scaleTime().domain([startDate, endDate]).ticks())
+
+
+      let tday = new Date().getDay();
+
+
+
     //xScale.ticks(d3.timeMinute.every(10));
       _this.yScale = d3.scaleLinear()
     .domain(yDomain)
     .range([this.height, 0]);
+
 
     g.append("g")
     .attr("transform", "translate(0," + this.height + ")")
@@ -880,7 +991,9 @@ export class SvgSchedulerComponent {
       d3.axisBottom(_this.xScale)
       .ticks(d3.timeMinute.every(30))
       .tickSize(-this.height)
+        .tickFormat(d3.timeFormat("%I %p"))
     )
+
     .selectAll("text")
     .attr("y", 0)
     .attr("x", -5)
@@ -888,8 +1001,14 @@ export class SvgSchedulerComponent {
     .attr("transform", "rotate(-90)")
     .style("text-anchor", "end")
     .style("display", function (d: any, i: any) {
-      return i % 2 === 0 ? "none" : "inherit"
+      return i % 2 === 0 ? "none" : "inherit";
     })
+    .style("fill", function(d:any) {
+      return d.getDay() === tday ? "#000" : "#ccc";
+
+    })
+
+
 
     g.append("g")
     .call(
@@ -902,9 +1021,24 @@ export class SvgSchedulerComponent {
     //.attr("fill", "#000")
     .attr("transform", "rotate(-90)")
     .attr("y", 6)
-    .attr("dy", "0.71em")
+    .attr("dy", "0.71em");
+
+    /*
+
+    .style("fill", "green")
     .attr("text-anchor", "end")
     .text("Celcius");
+*/
+
+
+    // Here we are going to mod the vertical gridlines to make the leading and trailing day regions more subdued:
+      d3.selectAll('g.grid:nth-child(1) g.tick')
+      .filter(function(d){ return d.getHours() === 0 && d.getMinutes() == 0;} )
+      .select('line') //grab the tick line
+      //.attr('class', 'quadrantBorder') //style with a custom class and CSS
+      //.style('stroke', "green");
+      .style('stroke-width', 2)
+      .style('stroke', '#999');
 
 
     // Let's track the mouse position!:
@@ -935,7 +1069,7 @@ export class SvgSchedulerComponent {
 
   svgOnMouseMove(elRef) {
 
-    var rawCoords = d3.mouse(elRef);
+    let rawCoords = d3.mouse(elRef) || [0,0];
     let _this = this;
 
     // Normally we go from data to pixels, but here we're doing pixels to data
@@ -946,29 +1080,32 @@ export class SvgSchedulerComponent {
       , timeString = new Date(newPoint.x_position).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
 
-    var currentMouseTemp = newPoint.y_position;
+    let currentMouseVal = newPoint.y_position;
     var currentMouseTime = timeString;
 
 
     if (rawCoords[0] <= _this.margin.left || rawCoords[0] >= _this.margin.left + _this.width) {
-      currentMouseTemp = 0; //'';
+      currentMouseVal = 0; //'';
       currentMouseTime = '';
     }
 
     if (rawCoords[1] <= _this.margin.top || rawCoords[1] >= _this.margin.top + _this.height) {
-      currentMouseTemp = 0; //'';
+      currentMouseVal = 0; //'';
       currentMouseTime = '';
     }
 
 
     _this.currentTime = currentMouseTime;
-    _this.currentValue = currentMouseTemp;
+    _this.currentValue = currentMouseVal;
+    _this.rawCoords = rawCoords;
 
   }
 
 
 
   svgOnClick(elRef) {
+
+    if (this.logging) console.log("svgOnClick() METHOD CALLED")
 
     let _this = this;
 
@@ -984,10 +1121,8 @@ export class SvgSchedulerComponent {
     }
 
 
-
-
     // Normally we go from data to pixels, but here we're doing pixels to data
-    var newPoint             = {
+    var newPoint = {
       x_position: Math.round(_this.xScale.invert(coords[0] - _this.margin.left)),
       y_position: Math.round(_this.yScale.invert(coords[1] - _this.margin.top))
     }
@@ -1013,12 +1148,11 @@ export class SvgSchedulerComponent {
       , y_position: coords[1]
       , value: newPoint.y_position
       , minutes: grossMinutes //timeString
-
+      , day: null
     };
 
-
-    console.log("what are we pushing?")
-    console.log(newDataPoint)
+    if (_this.logging) console.log("what are we pushing?")
+    if (_this.logging) console.log(newDataPoint)
 
     //_this.timePoints.push(newDataPoint)
 
@@ -1031,12 +1165,32 @@ export class SvgSchedulerComponent {
       if (a === b) {
         return 0;
       } else {
-        return a.x_position < b.x_position ? -1 : 1;
+
+        return a.minutes < b.minutes ? -1 : 1;
+        //return a.x_position < b.x_position ? -1 : 1;
       }
 
     });
 
+    // Here we want to see if this is the first time point created for the experiment and, if so, create terminal time points
+    // for each day in the experiment
+/*
+    if (_this.timePoints.length === 1) {
+      // This is the first time point created for the experiment, we have extra work to do
+      let days:number = _this.dataService.getDayCount()
+        , daysArr:number[] = [];
 
+      for (let i=1; i<=days; i++) {
+        daysArr.push(i)
+      }
+      let leadingTerminalTimePoint = this.getLeadingTerminalTimePoint(newDataPoint.y_position, newDataPoint.value);
+
+      let trailingTerminalTimePoint = this.getTrailingTerminalTimePoint(newDataPoint.y_position, newDataPoint.value)
+
+	    //this.dataService.addScheduleTimePoint(leadingTerminalTimePoint, daysArr);
+      //this.dataService.addScheduleTimePoint(trailingTerminalTimePoint, daysArr);
+    }
+    */
 
 
     //_this.addTerminalTimePoints()
@@ -1047,6 +1201,46 @@ export class SvgSchedulerComponent {
 
 
   } // svgOnClick()
+
+
+  getLeadingTerminalTimePoint(y:number, value:number) {
+    var tmpDate = new Date(0)
+    tmpDate.setHours(0);
+    tmpDate.setMinutes(0);
+
+
+     return {
+        x_position: 135 //_this.margin.x_position
+        , y_position: y //100 //this.timePoints[0].y_position
+        , value: value //this.timePoints[0].value
+        , environment: this.environment
+        //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        , minutes: 1 //(tmpDate.getHours() * 60) + tmpDate.getMinutes()
+       , day: null
+      };
+
+  }
+
+  getTrailingTerminalTimePoint(y:number, value:number) {
+    var tmpDate = new Date(0)
+    tmpDate.setHours(23);
+    tmpDate.setMinutes(59);
+
+    //let y = this.yScale(value)
+
+    //console.log(this.xScale((tmpDate.getHours() * 60) + tmpDate.getMinutes()))
+
+    return {
+      x_position: 824 //this.width
+      , y_position: y //lastTimePoint.y
+      , value: value
+      , environment: this.environment
+      //, time: tmpDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      , minutes: (tmpDate.getHours() * 60) + tmpDate.getMinutes()
+      , day: null
+    };
+
+  }
 
 
   addTerminalTimePoints() {
@@ -1068,7 +1262,7 @@ export class SvgSchedulerComponent {
               return false;
             }
 
-            if (this.growthChamberIds.indexOf(timePoint.chamber) === -1) {
+            if (this.chambers.indexOf(timePoint.chamber) === -1) {
               return false;
             }
 
