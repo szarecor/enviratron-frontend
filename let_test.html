@@ -2,9 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>Title</title>
 </head>
 <body>
-$END$
+
+<script>
+  console.log('testing let scope');
+
+  for (let i=0;i<20;i++) {
+        console.log("outer", i);
+
+        for (let i=0, i<100; i+=4) {
+
+              console.log("inner", i);
+        }
+
+  }
+
+</script>
+
+
 </body>
 </html>

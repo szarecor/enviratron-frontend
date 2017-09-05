@@ -2,9 +2,111 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>Title</title>
 </head>
 <body>
-$END$
+
+<p>wood shedding some ideas related to managing relative time points.</p>
+
+
+<script>
+
+
+
+function getBaseDate() {
+  var baseDateTime = new Date();
+  baseDateTime.setMonth(0);
+  baseDateTime.setDate(1);
+  baseDateTime.setHours(0);
+  baseDateTime.setMinutes(0);
+  baseDateTime.setSeconds(0)
+  return baseDateTime;
+}
+
+
+function getOffsetDate(base, offsetDays, offsetHours, offsetMinutes) {
+  // Takes a Date object and returns a new Date object based on the input Date and the given offsetX parameters
+  offsetDays = offsetDays || 0;
+  offsetHours = offsetHours || 0;
+  offsetMinutes = offsetMinutes || 0;
+
+  var newDate = new Date(base);
+  //newDate.setMonth(0);
+  newDate.setDate(base.getDate() + offsetDays);
+  newDate.setHours(base.getHours() + offsetHours);
+  newDate.setMinutes(base.getMinutes() + offsetMinutes);
+  return newDate;
+}
+
+function getMinutesDifference(date1, date2) {
+    return (Math.abs(date1.getTime() - date2.getTime())) / (1000 * 60);
+}
+
+
+
+
+var offsetTests = [];
+
+offsetTests.push({
+  days: 0
+  , hours: 0
+  , minutes: 2
+  , assertValue: 2
+});
+
+offsetTests.push({
+  days: 0
+  , hours: 2
+  , minutes: 0
+  , assertValue: 2*60
+});
+
+
+offsetTests.push({
+  days: 1
+  , hours: 0
+  , minutes: 0
+  , assertValue: 24*60
+});
+
+offsetTests.push({
+  days: 0
+  , hours: 1
+  , minutes: 60
+  , assertValue: 2*60
+});
+
+offsetTests.push({
+  days: 0
+  , hours: 0
+  , minutes: 49
+  , assertValue: 49
+});
+
+offsetTests.push({
+  days: 0
+  , hours: 24
+  , minutes: 0
+  , assertValue: 24*60
+});
+var base = getBaseDate();
+
+for (var i=0, l=offsetTests.length; i<l; i++) {
+
+  var test = offsetTests[i];
+
+  var testOffset = getOffsetDate(base, test.days, test.hours, test.minutes);
+
+  console.log(testOffset);
+  var offsetVal = getMinutesDifference(base, testOffset);
+  console.log(offsetVal, offsetVal === test.assertValue);
+
+}
+
+
+
+</script>
+
+
 </body>
 </html>

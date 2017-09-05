@@ -14,71 +14,41 @@ import { ChamberDataService } from './data.service';
 
 
 export class DaysSelectComponent  {
-    @Input() dayCount: number = 0;
-    @Input() selectedDays: number[] = [];
-    @Input() completedDays: number[] = [];
+    private dayCount: number = 0;
+    private selectedDays: number[] = [];
+    private completedDays: number[] = [];
     // to be populated by ngOnInit() method:
-    days: any =  [];
-    dataService : any;
-
-    // Emit an event for the parent to handle when there is a change on the days <select> list:
-    //@Output() onDaysChange: EventEmitter<any> = new EventEmitter<any>();
+    days:number[] = [];
 
     // This is fired when there is a change on the days <select> list, see the template for (ngModelChange)
     selectedDaysChangeHandler(selectedDays: number[]) {
-
         this.dataService.setSelectedDays(selectedDays)
-
-
-        //this.onDaysChange.emit(selectedDays);
     }
 
 
-  constructor(private ds: ChamberDataService) {
-    this.dataService = ds; //ChamberDataService;
+  constructor(private dataService: ChamberDataService) {
 
     let _this = this;
 
     this.dataService.getDays().subscribe(function(days: any[]) {
-
       _this.selectedDays = days;
 
     });
 
+    _this.dayCount = this.dataService.getDayCount();
 
-    /*
-    this.dataService.getChambers().subscribe((chambers : number[]) => this.chambers = chambers );
-    //this.dataService.getCurrentChambers().subscribe((chambers : number[]) => this.currentChambers = chambers );
-    //this.currentChambers = this.dataService.getCurrentChambers();
-    //let _that = this;
-
-    this.dataService.getCurrentChambers().subscribe(function(chambers : number[]) {
-      console.log('buttons comp receiving', chambers)
-      this.currentChambers = chambers;
-      console.log("and", this.currentChambers, this)
-      //self.zone.run(() => {
-      //  console.log('enabled time travel');
-      //});
-
-      //this.cd.markForCheck();
-    });
-    */
+    // Initialize the array of day identifiers:
+    this.days = Array.from(
+      Array(this.dayCount).keys(),
+      function(i) {
+        return i+1;
+      }
+    );
 
   }
 
 
-  ngOnInit() {
-        // Initialize the array of day identifiers:
-        this.days = Array.from(
-            Array(this.dayCount).keys(),
-            function(i) {
-                return i+1;
-            }
-        );
-        // TODO: this shouldn't be hard-coded here:
-        this.dataService.setSelectedDays([1])
-
-    }
+  //ngOnInit() {}
 
 
 }

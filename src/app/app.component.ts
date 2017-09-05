@@ -1,107 +1,230 @@
-import { Component, Input, Output, OnInit} from '@angular/core';
+import { Component, Input, Output, OnInit, ViewContainerRef} from '@angular/core';
 import { Subscription } from 'rxjs/Subscription';
 import { ChamberDataService } from './data.service';
 import {Observable} from "rxjs/Observable";
 import { Chamber, EnvironmentalVariableTimePoint } from './chamber.interface';
 import {CurrentSelectionStateValidator} from "./CurrentSelectionStateValidator.service";
-//import {current} from "codelyzer/util/syntaxKind";
+import {logging} from "selenium-webdriver";
+import {isUndefined} from "util";
+
+
+
 
 @Component({
   selector: 'my-app',
   // This was poorly documented and difficult to find:
   interpolation: ['[[', ']]'],
   templateUrl: './app_template.html'
-  //, providers: [ChamberDataService]
 
 })
-
-
 export class AppComponent implements OnInit {
 
-    currentExperimentId: number = 2;
-    currentTimePoints: EnvironmentalVariableTimePoint[] = [];
-    dataService: any;
-    validatorService: any;
-    validationState: any;
-    dayCount: number;
+    private logging:boolean = false;
+    private currentExperimentId: number;
+    private currentTimePoints: EnvironmentalVariableTimePoint[] = [];
+    private validationState: any;
+	  // this is used to disable buttons while work is being done so there's no double clicking, etc:
+    private isRectifyingInvalidState:boolean = false;
 
-    // passed to the environment selection menu component via @Input param:
-    defaultEnv: string = 'Lighting';
+    private dayCount: number = 20;
 
-    //selectedDays = new Observable<number[]>(); //[1,5,6,7];
+    private currentDays : number[] = [];
+    private completedDays : number[] = [];
+    private chambers: any[] = [];
+    private environment? : string;
+    private schedule? : any[] = [];
+    private experimentId:number;
 
-    currentDays : any[] = [1];
-    completedDays : number[] = []; //[2,3,4];
-    growthChambers: any[] = []; // new Observable<Chamber[]>(); //[1,5,6,7];
-    currentEnvironment? : string = ''; //new Observable<string>();
-    schedule? : any[] = [];
+    private defaultEnvironment = 'Lighting';
 
-
-
-    constructor(private ChamberDataService: ChamberDataService, ValidationService: CurrentSelectionStateValidator) {
-
-      this.dataService = ChamberDataService;
-      this.validatorService = ValidationService;
-
+    constructor(private dataService: ChamberDataService, private validationService: CurrentSelectionStateValidator) {
 
       let _this = this;
 
-      // TODO: this doesn't belong here:
-      //this.dataService.setChambers([1,2,3,4,5,6,7,8]);
-      //this.dataService.setCurrentChambers([1,2,3]);
-      //this.dataService.setCurrentEnvironmentalParameter('lighting')
+      this.dataService.setDayCount(this.dayCount);
 
-      this.dataService.getCurrentEnvironmentalParameter().subscribe(function(env) {
-        _this.currentEnvironment = env;
+      this.dataService.getEnvironment().subscribe(function(env) {
+        _this.environment = env;
 
       })
 
       this.dataService.getChambers().subscribe(function(chambers) {
-        _this.growthChambers = chambers;
+        _this.chambers = chambers;
 
       })
 
-
-      this.validatorService.getState().subscribe(function(validationState) {
+      this.validationService.getState().subscribe(function(validationState) {
         _this.validationState = validationState;
 
-        console.log("DEBUGGING")
-        console.log(_this)
+        _this.validationState.dayKeys = Object.keys(validationState.dayData);
 
+        if (_this.validationState.isValid === true) {
 
+          _this.isRectifyingInvalidState = false;
+
+        }
+
+        if (_this.logging) console.log("WHAT IS VALIDATION STATE?");
+        if (_this.logging) console.log(_this.validationState);
       });
 
     }
 
     ngOnInit(): void {
 
-        let _this = this;
+        // Here we are going to process any incoming url parameters to set the state:
+        let queryStringPairs = location.search.substr(1).split("&").map(function(s) { return s.split("="); })
+          , _this = this;
 
-        this.dataService.setExperimentId(this.currentExperimentId);
+        if (this.logging) console.log("WHAT IS THE SEARCH INPUT?")
+	      if (this.logging) console.log(queryStringPairs);
 
-        this.dataService.setSelectedDays(this.currentDays)
+
+        // To allow for multiple chambers and days, we are going to collect the values
+        // from the querystring in these arrays:
+        let queryStringChambers = []
+          , queryStringDays = [];
+
+        queryStringPairs.forEach(function(paramPair) {
+
+          var [k, v] = paramPair;
+
+          if (k === 'experiment') {
+
+            this.currentExperimentId = parseInt(paramPair[1]);
+            this.dataService.setExperimentId(this.currentExperimentId);
+
+          } else if (k === 'chamber') {
+
+            queryStringChambers.push(parseInt(v));
+            //this.dataService.setChambers(this.chambers);
+
+          } else if (k === 'day') {
+
+            queryStringDays.push(parseInt(v));
+
+          } else if (k === 'environment') {
+
+            this.dataService.setEnvironment(v);
+          }
+        }
+        , this); // END queryStringPairs.forEach LOOP
+
+        // Now apply the collected chamber data:
+        if (queryStringChambers.length > 0) {
+          this.chambers.forEach(function(chamber) {
+            chamber.isChecked = queryStringChambers.indexOf(chamber.id) !== -1; // === parseInt(v);
+          });
+
+          this.dataService.setChambers(this.chambers);
+
+
+        }
+        // And apply the collection days data:
+        if (queryStringDays.length > 0) {
+          this.currentDays = queryStringDays;
+          this.dataService.setSelectedDays(this.currentDays)
+        }
+
+        if (!this.environment) this.dataService.setEnvironment(this.defaultEnvironment);
+
 
         // TODO: this should get refactored generally to be less ugly:
-        this.dayCount = this.dataService.getDayCount();
-
+        //this.dayCount = this.dataService.getDayCount();
 
         this.dataService.getDays().subscribe(function(days) {
-
+          if (_this.logging) console.log("APP RECEIVING CURRENT DAYS FROM DATA SERVICE", days)
           _this.currentDays = days;
-
-        })
+        });
 
         this.dataService.getSchedule().subscribe(function(schedule) {
+          if (_this.logging) console.log("MAIN APP RECEIVING NEW SCHEDULE FROM dataService")
+          _this.schedule = schedule;
 
-          _this.schedule = schedule
-
-        })
-
+        });
+        this.experimentId = this.dataService.getExperimentId();
   }
 
+
+
+
+  deselectDays() {
+    this.dataService.setSelectedDays([]);
+  }
+
+  deselectChambers() {
+      if (this.logging) console.log("deselectChambers() called")
+
+      this.chambers.forEach(function(chamber) {
+        chamber.isChecked = false;
+      })
+      this.dataService.setChambers(this.chambers);
+      if (this.logging) console.log("WHAT IS VALIDATION STATE?")
+      if (this.logging) console.log(this.validationState);
+  }
+
+
+  overwriteDayData(masterDayId:number) {
+
+    this.isRectifyingInvalidState = true;
+
+    if (this.logging) console.log("OVERWRITING DAILY DATA WITH", masterDayId);
+
+    let daysToClear = this.validationState.days.filter(function(day) { return day !== masterDayId; })
+      , _this = this;
+
+    if (this.logging) console.log("WHAT DAYS ARE WE CLEARING?", daysToClear);
+
+
+    this.dataService.deleteTimePointsByDays(daysToClear).subscribe(function(resp) {
+
+      if (_this.logging) console.log("CLEARING DAYS RECEIVED RESPONSE")
+      if (_this.logging) console.log(resp);
+
+      // We have received a response from the deletion, now we can proceed and repopulate/overwrite the data:
+      _this.dataService.cloneDayData(masterDayId, daysToClear);
+
+    });
+
+  } // END overwriteDayData() METHOD
+
+  overwriteChamberData(masterChamberId) {
+    /** this function rectifies chamber-wise data.
+     * When two or more chambers with differing data are selected, this function can be used to
+     * delete the data for one or more chambers and replace it with the data from another (the masterChamberId)
+     * this operation is done while observing the other variables (current environment, current days, etc)
+     */
+
+    // TODO: it would be a vast improvement to filter out any chambers that are already a duplicate of the
+    // master chamber before calling the backend to delete and replace
+
+      this.isRectifyingInvalidState = true;
+
+      let _this = this
+
+      , chambersToClear = this.chambers.filter(function(chamber) {
+        return chamber.id !== masterChamberId && chamber.isChecked === true;
+      }).map(function(chamber) {
+        return chamber.id;
+      });
+
+      if (this.logging) console.log("WHAT CHAMBERS ARE WE CLEARING?", chambersToClear);
+
+          _this.dataService.deleteTimePointsByChamber(chambersToClear).subscribe(function (resp) {
+
+            if (_this.logging) console.log("AND HERE WE ARE IN APP, WHAT IS RESP?")
+            if (_this.logging) console.log(resp);
+            // We've cleared the existing data for the chambers in question, let's repopulate those chambers
+            // with data from the chamber we want to clone:
+            //this.dataService.cloneChamberData(masterChamberId, chambersToClear);
+            _this.dataService.cloneChamberData(masterChamberId, chambersToClear);
+          })
+    }
+
+
   handleNewTimePoint(newPoint: any) {
-      console.log("NEW POINT!!!!")
-      console.log(newPoint);
+      if (this.logging) console.log("NEW POINT")
+      if (this.logging) console.log(newPoint);
   }
 
     handleTimePointsChange(newState: any[]) {
@@ -110,8 +233,8 @@ export class AppComponent implements OnInit {
 
 
 
-      let currentEnv: string = this.currentEnvironment
-        , currentChambers: Chamber[] = this.growthChambers.filter(function(chamber) {
+      let currentEnv: string = this.environment
+        , currentChambers: Chamber[] = this.chambers.filter(function(chamber) {
               return chamber.isChecked;
           })
 
@@ -140,7 +263,7 @@ export class AppComponent implements OnInit {
       this.currentTimePoints = this.currentTimePoints.filter(function(tp) {
 
 
-        if (currentChamberIds.indexOf(tp.chamberId) > -1 && this.currentDays.indexOf(tp.day) > -1 && tp.environment == this.currentEnvironment) {
+        if (currentChamberIds.indexOf(tp.chamberId) > -1 && this.currentDays.indexOf(tp.day) > -1 && tp.environment == this.environment) {
 
           return false;
         }
@@ -174,7 +297,7 @@ export class AppComponent implements OnInit {
 
             this.currentTimePoints.push({
               environment: currentEnv
-              , timePoint: timePoint.time || timePoint.timePoint
+              , minutes: timePoint.time || timePoint.minutes
               , day: currentDay
               , chamberId: currentChamberId
               , value: timePoint.value
@@ -213,11 +336,11 @@ export class AppComponent implements OnInit {
           } else {
             // days are equal:
 
-            if (a.timePoint === b.timePoint) {
+            if (a.minutes === b.minutes) {
               return 0;
             } else {
 
-              return a.timePoint < b.timePoint ? -1 : 1;
+              return a.minutes < b.minutes ? -1 : 1;
             }
 
 

@@ -1,7 +1,7 @@
 
 <ul id="chamber_tabs_nav">
 
-  <li (click)="handleClick(item)" *ngFor="let item of menuItems" [ngClass]="{'current': currentState === item }">[[ item ]]</li>
+  <li (click)="handleClick(item)" *ngFor="let item of menuItems" [ngClass]="{'current': environment === item }">[[ item ]]</li>
 
 </ul>
 

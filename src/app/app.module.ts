@@ -12,10 +12,23 @@ import {ChamberDataService} from "./data.service";
 import {HttpClientModule} from '@angular/common/http';
 import {CurrentSelectionStateValidator} from "./CurrentSelectionStateValidator.service";
 
+import { Routes, RouterModule, ActivatedRoute }  from '@angular/router';
+//import {ValidationModalComponent} from './ValidationModal.component';
+//import { ActivatedRoute } from '@angular/router';
+//import { RouterModule } from '@angular/router';
+
+//import { AngularBasicModalModule } from 'angular-basic-modal';
+
+//import { Overlay } from 'angular2-modal';
+//import { Modal } from 'angular2-modal/plugins/bootstrap';
+
+//import { ModalModule } from 'angular2-modal';
+//import { BootstrapModalModule } from 'angular2-modal/plugins/bootstrap';
+
 @NgModule({
-  imports:      [ BrowserModule, FormsModule, HttpClientModule],
+  imports:      [ BrowserModule, FormsModule, HttpClientModule, RouterModule],
   declarations: [ AppComponent, DaysSelectComponent, ChamberButtonsComponent, ChamberVariablesMenuComponent
-    , SvgSchedulerComponent, SubmitButtonComponent ],
+    , SvgSchedulerComponent, SubmitButtonComponent],
   bootstrap:    [ AppComponent ]
   , providers: [ChamberDataService, CurrentSelectionStateValidator]
 })

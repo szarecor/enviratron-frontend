@@ -12,7 +12,8 @@ export interface Chamber {
 
 export interface EnvironmentalVariableTimePoint {
   environment: string;
-  timePoint: any;
+  minutes:number;
+  //timePoint: any;
   day: number;
   value: number;
   chamberId: number;

@@ -5,4 +5,11 @@ export interface ValidationState {
   isValid?: boolean;
   daysValid?: boolean;
   chambersValid?: boolean;
+
+  dayData?: object;
+  days?: number[];
+  chamberData?: any[];
+
+  chamberIds?: number[];
+
 }

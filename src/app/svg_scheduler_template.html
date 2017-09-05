@@ -1,49 +1,26 @@
 
   <style>
-
-
     #days button {
       margin: .4em;
-
     }
 
     #days button.day-button-selected {
       background-color: darkgreen !important;
       color: #f8f8f8;
     }
+
   </style>
 
+  <svg width="960" height="300"></svg>
 
-  <!--<div *ngFor="let chamber of growthChamberIds">[[chamber.id ]] [[chamber.isChecked]]</div>-->
-
-  <h1>[[ consistencyState.status ]]</h1>
-
-  <svg width="800" height="300"></svg>
-
-  <a (click)="clearUi()">clear</a>
+  <h4>[[ validationState.isValid ]]</h4>
+  <button type (click)="clearUi()">clear</button>
 
   <div>
-    Current: <span id="mouseCurrentTemp">[[ currentValue ]]</span> &deg; C at <span id="mouseCurrentTime">[[ currentTime ]]</span>
+    Current: <span id="mouseCurrentTemp">[[ currentValue ]]</span> at <span id="mouseCurrentTime">[[ currentTime ]]
+    with x = [[ rawCoords[0] ]] and y = [[ rawCoords[1] ]]</span>
   </div>
 
-  <!--
   <ol>
-
-    <li *ngFor="let day of selectedDays">[[ day ]]</li>
-
+    <li *ngFor="let point of timePoints">[[ point.type ]] chamber: [[ point.chamber ]] -- [[ point.environment ]] -- day: [[ point.day ]] -- minutes: [[ point.minutes ]] -- value: [[ point.value ]] and x is [[ point.x_position ]], and y is [[ point.y_position ]]</li>
   </ol>
-  -->
-
-  <!--
-  In SVG Comp<br />
-  What is days? [[ days ]]<br />
-  What is the environment? [[ environment ]]
-
-  <br />
-  [[ selectedDays ]]
-  <br />
-
-  <ol>
-    <li *ngFor="let point of timePoints">[[ point.temp ]] - [[ point.time ]]</li>
-  </ol>
--->

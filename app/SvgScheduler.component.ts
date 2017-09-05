@@ -160,7 +160,7 @@ timePointClick(thisPoint : any) {
     });
   }
 
-  //console.log(timePoints); //.map(function(p) { return p.x; }))
+  //console.log(timePoints); //.map(function(p) { return p.x_position; }))
 
   this.svg.append("path")
       .datum(this.timePoints)
@@ -348,7 +348,7 @@ timePointClick(thisPoint : any) {
 
           })
 
-          // Sort the timepoints on x-axis position:
+          // Sort the timepoints on x_position-axis position:
           _this.timePoints.sort(function(a,b) {
             if (a === b) {
               return 0;
@@ -373,7 +373,7 @@ timePointClick(thisPoint : any) {
 
       timePoints = timePoints.filter(function(p) {
 
-        return !(p.x === thisPoint.x && p.y === thisPoint.y);
+        return !(p.x_position === thisPoint.x_position && p.y_position === thisPoint.y_position);
 
       });
 

@@ -4,36 +4,22 @@
 
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Subject } from 'rxjs/Subject';
 import {BehaviorSubject} from "rxjs/BehaviorSubject";
 import { Chamber } from './chamber.interface';
-//import {Http} from "@angular/http";
 import {HttpClient} from '@angular/common/http';
-
-//import { URLSearchParams, Headers} from "@angular/common/http"
-
 import 'rxjs/add/operator/map';
 
-//import {HttpModule} from "@angular/http";
-//import {HttpClient} from "selenium-webdriver/http";
-//import {Http, Response, Headers} from 'angular2/http';
 
 @Injectable()
-/*
-@NgModule({
-  imports: [
-    HttpModule,
-  ],
-})
-*/
 export class ChamberDataService {
 
-
+    private logging:boolean = false;
     private chambers = new BehaviorSubject<Chamber[]>([]);
     private selectedChamberIds = new BehaviorSubject<number[]>([]);
-    private days : number = 20;
+    // TODO: Don't hardcode days here, it needs to come from the DB/Server
+    private days : number;
     private selectedDays = new BehaviorSubject<number[]>([]);
-    private currentEnvironmentalParameter? = new BehaviorSubject<string>('');
+    private environment? = new BehaviorSubject<string>('');
     private timePoints = new BehaviorSubject<any[]>([]);
     private schedule = new BehaviorSubject<any[]>([]);
 
@@ -42,12 +28,13 @@ export class ChamberDataService {
 
 
     constructor(private http: HttpClient) {
-
-      console.log("dataService constructor called")
-
-
+      if (this.logging) console.log("dataService constructor called")
     }
 
+
+    getExperimentId() {
+      return this.experimentId;
+    }
 
     setExperimentId(experimentId:number) {
 
@@ -55,7 +42,7 @@ export class ChamberDataService {
 
       this.experimentId = experimentId;
 
-      console.log("dataService setExperiment() called", experimentId)
+      if (this.logging) console.log("dataService setExperiment() called", experimentId)
 
       // Call the server to fetch any existing data we might have:
       let _url = 'http://localhost:8000/experiments/datapoints/' + this.experimentId + "/";
@@ -64,18 +51,29 @@ export class ChamberDataService {
       this.http.get(
         _url
       ).subscribe(function(resp: any) {
-        console.log("GET RESPONSE:");
-        console.log(resp.schedule);
-        window['dbug'] = resp;
+        if (this.logging) console.log("GET RESPONSE:");
+        if (this.logging) console.log(resp.schedule);
 
-        //let sched = JSON.parse(resp);
+        _this.setSchedule(resp.schedule);
+      });
+    }
+
+
+    loadData() {
+      // Call the server to fetch any existing data we might have:
+      let _url = 'http://localhost:8000/experiments/datapoints/' + this.experimentId + "/";
+      let _this = this;
+
+      this.http.get(
+        _url
+      ).subscribe(function(resp: any) {
+        if (this.logging) console.log("GET RESPONSE:");
+        if (this.logging) console.log(resp.schedule);
+
         _this.setSchedule(resp.schedule);
       });
 
-
-
     }
-
 
     /* SCHEDULE: */
 
@@ -86,29 +84,179 @@ export class ChamberDataService {
 
 
     getSchedule() {
-      console.log("GET SCHEDULE CALLED!!!!")
+      if (this.logging) console.log("GET SCHEDULE CALLED")
       return this.schedule.asObservable();
     }
 
 
+   cloneDayData(sourceDay:number, destinationDays: number[]) {
+     let _url:string = 'http://localhost:8000/experiments/add-datapoints/'
+       , datapointsToCopy = this.schedule.value.filter(function(timePoint) {
 
-    clearTimePoints(chambers: any[], days: number[], environment: string) {
+          if (timePoint.environment !== this.environment.value) return false;
+          if (this.selectedChamberIds.value.indexOf(timePoint.chamber) === -1) return false;
+          if (timePoint.day !== sourceDay) return false;
+
+          return true;
+      }
+      , this);
+
+     if (this.logging) console.log("WHAT ARE THE DAY DATAPOINTS TO COPY?");
+     if (this.logging) console.log(datapointsToCopy);
+
+     let _this = this;
+     let counter = 0;
+
+     for (let timePoint of datapointsToCopy) {
+
+       for (let day of destinationDays) {
+
+
+         if (this.logging) console.log("COPYING TO", day);
+
+          let tmpCopy = JSON.parse(JSON.stringify(timePoint));
+          tmpCopy.day = day;
+
+          if (this.logging) console.log("COPY", timePoint, day)
+		      this.http.post(
+	          _url
+		        , tmpCopy
+		      ).subscribe(function(resp) {
+            counter++;
+		        if (this.logging) console.log("POST RESPONSE:", resp, counter);
+
+		        if (counter === datapointsToCopy.length) {
+		          // We have received responses for all of the insert/create requests:
+              window.setTimeout(
+                function() {
+                  console.log("DOES THIS EVER FIRE?");
+                  _this.loadData()
+                }, 750);
+            }
+		      });
+
+       } // for day of destinationDays
+     } // for dataPoint of dataPointsToCopy
+   } // END cloneDayData() METHOD
+
+
+   cloneChamberData(sourceChamber:number, destinationChambers: number[]) {
+      if (this.logging) console.log("CLONE METHOD CALLED", sourceChamber, destinationChambers);
+      if (this.logging) console.log("SOURCE CHAMBER", sourceChamber);
+      if (this.logging) console.log("destinations", destinationChambers);
+
+      // first get the time points we are going to clone:
+      let toCopy = this.schedule.value.filter(function(timePoint) {
+        if (timePoint.environment !== this.environment.value) {
+          return false;
+        }
+
+        if (timePoint.chamber !== sourceChamber) {
+          return false;
+        }
+
+        if (this.selectedDays.value.indexOf(timePoint.day) === -1) {
+          return false;
+        }
+        return true;
+
+      }, this)
+
+      if (this.logging) console.log("WHAT DO WE WANT TO COPY?");
+      if (this.logging) console.log(toCopy);
+
+     let _url:string = 'http://localhost:8000/experiments/add-datapoints/'
+
+
+     for (let timePoint of toCopy) {
+
+       for (let destinationChamber of destinationChambers) {
+
+
+         let tmpCopy = JSON.parse(JSON.stringify(timePoint))
+         tmpCopy.chamber = destinationChamber;
+
+         if (this.logging) console.log("CHAMBER", destinationChamber);
+         if (this.logging) console.log("CLONE", tmpCopy);
+
+           this.http.post(
+             _url
+             , tmpCopy
+           ).subscribe(function(resp) {
+             if (this.logging) console.log("POST RESPONSE:", resp);
+           });
+
+       }
+     }
+
+     let _this = this;
+
+
+     if (this.logging) console.log("FINISHED CLONING, CALLING this.loadData() ON DELAY...")
+    // TODO: THIS IS ONLY A QUICK PROOF OF CONCEPT, DO NOT USE TIMEOUTS! CONVERT THIS UGLINESS TO OBSERVABLES!
+     window.setTimeout(
+       function() {
+         _this.loadData()
+       }, 500);
+   }
+
+
+   deleteTimePointsByDays(days: number[]) {
+     let _url:string = 'http://localhost:8000/experiments/delete-datapoints/'
+
+       , _this = this
+       , payload = {
+	       experimentId: this.experimentId
+       , chambers: this.selectedChamberIds.value
+       , days: days
+       , environment: this.environment.value
+     };
+
+     if (this.logging) console.log("CLEARING DAY-WISE DATA")
+     if (this.logging) console.log("WHAT IS PAYLOAD?")
+     if (this.logging) console.log(payload);
+
+     return this.http.post(
+       _url, payload
+     ).map(function(res:Response) {
+       if (_this.logging) console.log(res);
+       return res;
+     });
+   }
+
+
+    deleteTimePointsByChamber(chambers: number[]) {
+      let _url:string = 'http://localhost:8000/experiments/delete-datapoints/'
+        , payload = {
+          experimentId: this.experimentId
+          , chambers: chambers
+          , days: this.selectedDays.value
+          , environment: this.environment.value
+        }
+        , _this = this;
+
+      return this.http.post(
+        _url
+        , payload
+      )
+      .map(function(res:Response) {
+        if (_this.logging) console.log(res);
+        return res;
+      });
 
     }
+
+    clearSchedule(chamber, day, environment) {
+    }
+
 
     removeScheduleTimePoint(timePointToDelete: any) {
 
       let _url:string = 'http://localhost:8000/experiments/delete-datapoint/'
-      let sched = this.schedule.value;
+        ,  sched = this.schedule.value
+        , len = this.schedule.value.length;
 
-      let len = this.schedule.value.length;
-
-      console.log("removeScheduleTimePoint called", timePointToDelete)
-
-
-      //timePoint['environment'] = this.currentEnvironmentalParameter.value
-
-      let tmpCopy;
+      if (this.logging) console.log("removeScheduleTimePoint called", timePointToDelete)
 
       let selectedChamberIds = this.chambers.value.filter(function(chamber) {
         return chamber.isChecked === true;
@@ -121,7 +269,7 @@ export class ChamberDataService {
 
       sched = sched.filter(function(timePoint) {
 
-        if (timePoint.environment !== this.currentEnvironmentalParameter.value) {
+        if (timePoint.environment !== this.environment.value) {
           return true;
         }
 
@@ -153,7 +301,7 @@ export class ChamberDataService {
         // It seems that filter didn't change the array of timePoints at all,
         // so there is nothing else to do...
 
-        console.log("return b/c sched.length...")
+        if (this.logging) console.log("return b/c sched.length...")
 
         return;
 
@@ -163,7 +311,7 @@ export class ChamberDataService {
 
       // Now we need to notify the backend server:
 
-      console.log("what is for deletion?", dataPointsToDelete)
+      if (this.logging) console.log("what is for deletion?", dataPointsToDelete)
 
       dataPointsToDelete.forEach(function(dp) {
 
@@ -173,42 +321,39 @@ export class ChamberDataService {
           _url
           , dp
         ).subscribe(function(resp) {
-          console.log("POST RESPONSE:");
-          console.log(resp);
+          if (this.logging) console.log("POST RESPONSE:");
+          if (this.logging) console.log(resp);
         });
 
       }, this)
     }
 
 
-    addScheduleTimePoint(timePoint: any) {
+    addScheduleTimePoint(timePoint: any, days?:number[]) {
 
-      let _url:string = 'http://localhost:8000/experiments/add-datapoints/'
-      let points: any[] = [];
-      let sched = this.schedule.value;
+      let daysToPopulate = days || this.selectedDays.value
+        , _url:string = 'http://localhost:8000/experiments/add-datapoints/'
+        , points: any[] = []
+        ,  sched = this.schedule.value
+	      , chambers = this.chambers.value.filter(function(chamber) {
+		      return chamber.isChecked === true;
+        });
+        //, selectedDays = this.selectedDays.value;
 
-
-      timePoint['environment'] = this.currentEnvironmentalParameter.value
-
-      //let tmpCopy;
-
-      let chambers = this.chambers.value.filter(function(chamber) {
-        return chamber.isChecked === true;
-
-      });
-      let selectedDays = this.selectedDays.value;
+      timePoint['environment'] = this.environment.value;
 
 
-      for (let i=0,l=selectedDays.length; i<l; i++) {
+      // Loop through the relevant days, creating a new datapoint for each
+      for (let i=0,l=daysToPopulate.length; i<l; i++) {
 
-        let day = selectedDays[i];
-        // TODO: Is there a better way to clone?
+        let day = daysToPopulate[i];
 
-
+        // And also loop through the relevant chambers creating a datapoint for each:
         for (let j=0,l2=chambers.length; j<l2; j++) {
 
           let chamber = chambers[j];
 
+          // TODO: Is there a better way to clone?
           let tmpCopy = JSON.parse(JSON.stringify(timePoint))
           tmpCopy.day = day;
           tmpCopy.chamber = chamber.id;
@@ -251,6 +396,8 @@ export class ChamberDataService {
       });
 
 
+      console.log("WHAT IS OUR SORTED SCHEDULE?");
+      console.log(sched)
 
         this.schedule.next(sched);
 
@@ -261,12 +408,14 @@ export class ChamberDataService {
           let _clone = JSON.parse(JSON.stringify(dp));
           //_clone.experiment = 1;
 
+          console.log(_clone);
+
 
           this.http.post(
             _url
             , _clone
           ).subscribe(function(resp) {
-            console.log("POST RESPONSE:", resp);
+            if (this.logging) console.log("POST RESPONSE:", resp);
           });
 
         }, this);
@@ -279,13 +428,26 @@ export class ChamberDataService {
 
 
     getSelectedChambers() {
+      if (this.logging) console.log("DATA SERVICE RETURNING SELECTED CHAMBERS", this.selectedChamberIds.value);
       return this.selectedChamberIds.asObservable();
     }
 
     setChambers(chambers: Chamber[]) {
-        this.chambers.next(chambers);
-        this.selectedChamberIds.next(chambers.filter((c) => c.isChecked).map(c => c.id));
 
+        let tmpChambers = chambers.filter(function(chamber) {
+          return chamber.isChecked;
+        }).map(function(chamber) {
+          return chamber.id;
+        })
+
+        if (this.logging) console.log("DATA SERVICE RECEIVING CHAMBERS");
+        if (this.logging) console.log('CHAMBERS', tmpChambers);
+
+        this.chambers.next(chambers);
+        this.selectedChamberIds.next(tmpChambers);
+
+        //this.selectedChamberIds.next(chambers.filter((c) => c.isChecked).map(c => c.id));
+        if (this.logging) console.log("SETTING SELECTED CHAMBERS", this.selectedChamberIds.value);
     }
 
     /* TIME POINTS */
@@ -305,17 +467,18 @@ export class ChamberDataService {
       return this.days;
     }
 
+    setDayCount(days:number) {
+      this.days = days;
+    }
+
     getDays(): Observable<number[]> {
       return this.selectedDays.asObservable();
     }
 
 
 
-
     setSelectedDays(days: number[]) {
-
         this.selectedDays.next(days);
-
     }
 
     getCompletedDays(): number[] {
@@ -324,23 +487,19 @@ export class ChamberDataService {
 
     /* CHAMBER ENVIRONMENT PARAMETERS: */
 
-    getCurrentEnvironmentalParameter() {
+    getEnvironment() {
 
-      return this.currentEnvironmentalParameter.asObservable();
+      return this.environment.asObservable();
     }
 
-    getCurrentEnvironmentalParameterValue() {
-      return this.currentEnvironmentalParameter.value;
-
-    }
-
-    setCurrentEnvironmentalParameter(environment: string) {
-
-
-      this.currentEnvironmentalParameter.next(environment); //{name:environment});
-
+    getEnvironmentValue() {
+      return this.environment.value;
 
     }
 
+    setEnvironment(environment: string) {
+      if (this.logging) console.log("DATA SERVICE RECEIVING NEW ENVIRONMENT!", environment);
+      this.environment.next(environment); //{name:environment});
+    }
 
 }

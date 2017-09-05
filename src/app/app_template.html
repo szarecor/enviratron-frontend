@@ -1,57 +1,155 @@
+<style>
+  body, * {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #333333;
 
-[[ validationState.isValid ]]
+  }
+
+  modal-content {
+
+    background: #d0d0d0;
+    opacity: 1;
+    border: 1px solid orange;
+  }
+
+
+</style>
+
+
+
+<style>
+  #scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    width: 100%;
+    height: 200%;
+    opacity: .93;
+    background-color: #333;
+  }
+
+  #chamber_validation_wrapper {
+
+    position: absolute;
+    width: 80%;
+    min-height: 400px;
+    background-color: #fff;
+    border: 1px solid #999;
+    -webkit-font-smoothing: antialiased;
+    z-index: 100;
+    margin: 10em auto;
+    left: 0;
+    right: 0;
+    opacity: 1;
+    padding: 2em;
+  }
+
+  #chamber_validation_wrapper button {
+    margin: .5em;
+    padding: .4em;
+  }
+  #chamber_validation_wrapper button:hover {
+    cursor: pointer;
+  }
+
+
+  #chamber_validation_wrapper button:disabled {
+    opacity: .2;
+  }
+</style>
+
+<div id="scrim" [style.display]="validationState.isValid ? 'none' : 'block'">
+
+<div id="chamber_validation_wrapper" [style.display]="validationState.chambersValid ? 'none' : 'block'">
+
+  <h3>Data Conflict</h3>
+
+  <h4>You have selected [[ validationState.chamberData.length ]] chambers with different datapoints</h4>
+
+  <p>You can either undo the selection or use the data from one chamber to overwrite the data for the other chambers. Overwriting will delete existing data and is irreversible.</p>
+
+  <p>What would you like to do?</p>
+
+
+
+  <button type="button" (click)="deselectChambers()">Undo Chamber Selection</button>
+  <button [disabled]="isRectifyingInvalidState" type="button" *ngFor="let chamberId of validationState.chamberIds" (click)="overwriteChamberData(chamberId)">Apply <strong>Chamber [[ chamberId ]]</strong> Data to All Selected Chambers</button>
+
+
+</div>
+
+
+<div id="chamber_validation_wrapper" [style.display]="validationState.daysValid ? 'none' : 'block'">
+  <h2>Data Conflict</h2>
+
+  <h1>daysValid? [[ validationState.daysValid ]]</h1>
+
+  <h3>You have selected [[ validationState.days.length ]] days with different datapoints</h3>
+  <p>You can either undo the selection or use the data from one day to overwrite the data for the other days. Overwriting will delete existing data and is irreversible.</p>
+
+  <p>What would you like to do?</p>
+
+  <button type="button" (click)="deselectDays()">Undo Days Selection</button>
+
+
+
+
+  <button [disabled]="isRectifyingInvalidState" type="button" *ngFor="let day of validationState.days" (click)="overwriteDayData(day)">
+    Apply <strong>Day [[ day ]]</strong> Data to All Selected Days</button>
+
+
+
+    <div *ngFor="let k of validationState.dayKeys">
+      <div *ngFor="let g of validationState.dayData[k]">chamber [[ g.chamber ]] day [[ g.day ]] [[ g.environment ]] [[ g.value ]] [[ g.minutes ]]</div>
+      <hr />
+    </div>
+
+</div>
+
+
+
+</div><!-- end scrim div -->
+
 
 <hr />
 
-<chamber-buttons (onChambersChange)="handleChambersChange($event)">
-</chamber-buttons>
+<chamber-buttons></chamber-buttons>
 <hr />
 
 
 <hr />
 
-[[ defaultState ]]
-
-<chamber-variables-menu [defaultState]="defaultEnv"></chamber-variables-menu>
+<chamber-environment-menu></chamber-environment-menu>
 
 <hr />
-<days-select [dayCount]="dayCount" [selectedDays]="selectedDays" [completedDays]="completedDays"></days-select>
-
+<days-select></days-select>
 
 
 <svg-scheduler (onTimePointsChange)="handleTimePointsChange($event)"></svg-scheduler>
 
-
+<!--
 <enviratron-chamber-submit-button></enviratron-chamber-submit-button>
+-->
 
 
-
-<br /><br /><br /><br /><br /><br />
+<br /><br /><br />
 
 <hr />
 <p>Everything below this point is in the parent component</p>
 
-current enviroment: [[ currentEnvironment ]]
+What is the experiment ID? [[ experimentId ]]<br />
 
-
-
+Validation State: [[ validationState.isValid ]]
 <br />
 
-<!--current chambers: [[ dataService.currentChambers | async ]]-->
-<!--
-<div *ngFor="let cc of chambers | async">[[ cc.id ]] [[ cc.isChecked ]]</div>
--->
-
-<div *ngFor="let chamber of growthChambers">[[chamber.id ]] [[chamber.isChecked]]</div>
+Is rectifying invalid state? [[ isRectifyingInvalidState ]]
 <br />
 
+current enviroment: [[ environment ]]
 <br />
 
-
-<!--
-selectedDays:
-<div *ngFor="let day of selectedDays | async">[[ day ]]</div>
--->
+chambers: <div *ngFor="let c of chambers">[[ c.id ]] [[ c.isChecked ]]</div>
 
 <br />
 
@@ -59,26 +157,8 @@ currentDays:
 <div *ngFor="let day of currentDays">[[ day ]]</div>
 <br />
 
-
-time points:
-<ol>
-  <li *ngFor="let point of currentTimePoints">[[ point.type ]] chamber: [[ point.chamberId ]] -- day: [[ point.day ]] -- minutes: [[ point.timePoint ]] -- value: [[ point.value ]]</li>
-
-</ol>
-
-
 And what does the data service hold?
 <ol>
-  <li *ngFor="let point of schedule">[[ point.type ]] chamber: [[ point.chamberId ]] -- day: [[ point.day ]] -- minutes: [[ point.minutes ]] -- value: [[ point.value ]] and x is [[ point.x ]], and y is [[ point.y ]]</li>
-
+  <li *ngFor="let point of schedule">[[ point.type ]] chamber: [[ point.chamber ]] -- [[ point.environment ]] -- day: [[ point.day ]] -- minutes: [[ point.minutes ]] -- value: [[ point.value ]] and x is [[ point.x_position ]], and y is [[ point.y_position ]]</li>
 </ol>
-
-<!--
-Object
-chamberId: 1
-day: 7
-timePoint: "12:00 AM"
-type: "Lighting"
-value: 24
--->
 

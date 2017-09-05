@@ -7,16 +7,13 @@
 </label>
 
 <label [ngClass]="{'active': chamber.isChecked}" *ngFor="let chamber of chambers ; index as i">
-    <input (click)="chamberButtonClick($event)" type="checkbox" name="chambers" [(ngModel)]="chambers[i].isChecked" />
+    <input (click)="chamberButtonClick()" type="checkbox" name="chambers" [(ngModel)]="chambers[i].isChecked" />
     Chamber [[chamber.id]]
 </label>
 
 
 <br clear="both" />
 </div>
-<!--
- [ngClass]="{'check-mark': completedDays.indexOf(d) !== -1 }"
- -->
 
 <style>
     label {

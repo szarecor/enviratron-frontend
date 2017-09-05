@@ -2,8 +2,7 @@
 <select multiple [(ngModel)]="selectedDays" (ngModelChange)="selectedDaysChangeHandler($event)">
     <option [ngClass]="{'check-mark': completedDays.indexOf(d) !== -1 }" #chamberDays name="chamberDays"
             *ngFor="let d of days; index as i"
-            [value]="d">Day [[ d <= 9 ? '0' + d :
-        d ]]</option>
+            [value]="d">Day [[ d <= 9 ? '0' + d : d ]]</option>
 </select>
 
 
